@@ -1,0 +1,19 @@
+{
+  "name": "miniso-animal-crossing-avatar",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Prototipo académico: colaboración ficticia MINISO × Animal Crossing con personalizador de avatar 3D.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}
