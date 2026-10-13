@@ -17,6 +17,12 @@ export function hashString (s) {
   return Math.abs(h)
 }
 
+/** Ruta de /static como url() para variables CSS (style="--x:…").
+    Se convierte en dirección completa porque, dentro de una variable, el navegador
+    resolvería la ruta relativa desde la carpeta del CSS compilado (assets/) y no
+    desde la página, y la imagen no cargaría al publicar el sitio. */
+export const cssUrl = path => `url("${new URL(path, document.baseURI).href}")`
+
 export const $ = (sel, el = document) => el.querySelector(sel)
 export const $$ = (sel, el = document) => [...el.querySelectorAll(sel)]
 

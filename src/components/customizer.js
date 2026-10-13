@@ -1,7 +1,7 @@
 import gsap from 'gsap'
 import { CATEGORIES, randomAvatar } from '../data/avatarOptions.js'
 import { icon } from '../utils/icons.js'
-import { esc, $, $$ } from '../utils/format.js'
+import { esc, cssUrl, $, $$ } from '../utils/format.js'
 import { store } from '../utils/store.js'
 import { sound } from '../utils/sound.js'
 import { go } from '../utils/router.js'
@@ -76,7 +76,7 @@ function tabHTML (c) {
   return `
     <button type="button" class="cat-tab cat-tab--${c.tab.theme}" role="tab" id="tab-${c.id}" data-cat="${c.id}"
       aria-selected="${on}" aria-controls="catPanel" tabindex="${on ? 0 : -1}" aria-label="${esc(c.label)}">
-      <span class="cat-icon" style="--icon:url(images/ui/${c.tab.icon})" aria-hidden="true"></span>
+      <span class="cat-icon" style='--icon:${cssUrl(`images/ui/${c.tab.icon}`)}' aria-hidden="true"></span>
       <span class="cat-label" aria-hidden="true">${esc(c.label)}</span>
     </button>`
 }
@@ -121,7 +121,7 @@ function groupHTML (g, i, groups) {
           ${g.options.map(o => `
             <button type="button" class="img-opt" role="radio" data-key="${g.key}" data-id="${o.id}"
               aria-checked="${o.id === value}" tabindex="${o.id === value ? 0 : -1}"
-              aria-label="${esc(o.name)}" title="${esc(o.name)}" style="--img:url(${o.image})">
+              aria-label="${esc(o.name)}" title="${esc(o.name)}" style='--img:${cssUrl(o.image)}'>
               <span class="img-opt-shape"><span class="img-opt-ring"></span><img class="img-opt-img" src="${o.image}" alt="" /><span class="img-opt-check">${icon('check')}</span></span>
             </button>`).join('')}
         </div>
