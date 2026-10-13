@@ -1,0 +1,6 @@
+node_modules
+dist
+.DS_Store
+# Configuración local del editor / vista previa (no es parte del proyecto)
+launch.json
+.claude
