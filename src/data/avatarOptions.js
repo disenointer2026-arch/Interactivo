@@ -155,22 +155,25 @@ export const CATEGORIES = [
     camera: 'body',
     groups: [
       {
+        /* model: prenda .glb · builder: placeholder si el modelo no carga
+           hides: slots que se ocultan al usarla · scale: ajuste para que quede por encima */
         key: 'shirt', label: 'Parte superior', type: 'options', thumb: 'part',
         options: [
-          { id: 'basic', name: 'Camiseta' },
-          { id: 'stamp', name: 'Estampado hoja' },
-          { id: 'stripes', name: 'Rayas' },
-          { id: 'polo', name: 'Camisa con cuello' },
-          { id: 'hoodie', name: 'Buzo con capucha' },
-          { id: 'dress', name: 'Vestido' }
+          { id: 'camisa', name: 'Camiseta manzana', model: 'models/avatar/ropa/camisa.glb', builder: 'basic' },
+          { id: 'camisa-2', name: 'Camiseta estrella', model: 'models/avatar/ropa/camisa-2.glb', builder: 'stamp' },
+          { id: 'manga-larga', name: 'Manga larga', model: 'models/avatar/ropa/manga-larga.glb', builder: 'hoodie' },
+          { id: 'chaqueta', name: 'Chaqueta negra', model: 'models/avatar/ropa/chaqueta.glb', builder: 'hoodie' },
+          { id: 'chaqueta-2', name: 'Chaqueta de jean', model: 'models/avatar/ropa/chaqueta-2.glb', builder: 'polo' },
+          { id: 'vestido', name: 'Vestido', model: 'models/avatar/ropa/vestido.glb', builder: 'dress', hides: ['pants'] }
         ]
       },
       {
         key: 'pants', label: 'Parte inferior', type: 'options', thumb: 'part',
         options: [
-          { id: 'jeans', name: 'Pantalón' },
-          { id: 'shorts', name: 'Pantaloneta' },
-          { id: 'skirt', name: 'Falda' }
+          { id: 'jean', name: 'Jean', model: 'models/avatar/ropa/jean.glb', builder: 'jeans' },
+          { id: 'short', name: 'Short', model: 'models/avatar/ropa/short.glb', builder: 'shorts' },
+          { id: 'falda', name: 'Falda', model: 'models/avatar/ropa/falda.glb', builder: 'skirt' },
+          { id: 'overol', name: 'Overol', model: 'models/avatar/ropa/overol.glb', builder: 'overalls', scale: [1.06, 1, 1.06] }
         ]
       },
       {
@@ -221,9 +224,9 @@ export const DEFAULT_AVATAR = {
   mouth: 'smile',
   mouthColor: '#6B3A2E',
   ears: 'round',
-  shirt: 'stamp',
+  shirt: 'camisa',
   shirtColor: '#9ACB8A',
-  pants: 'jeans',
+  pants: 'jean',
   pantsColor: '#4A6FA5',
   shoes: 'sneakers',
   shoesColor: '#F7F5F0',
@@ -231,6 +234,15 @@ export const DEFAULT_AVATAR = {
   accFace: 'none',
   accNeck: 'none',
   companion: 'none'
+}
+
+/* ---------- Piezas fijas del personaje modelado ----------
+   Cuerpo y cabeza (con orejas) vienen de static/models/avatar. null deja el slot
+   vacío. Si se quitan estas rutas, el avatar vuelve a las piezas procedurales. */
+export const BASE_MODELS = {
+  body: 'models/avatar/cuerpo.glb',
+  head: 'models/avatar/cabeza.glb',
+  ears: null
 }
 
 /* ---------- Utilidades de consulta (no es necesario editarlas) ---------- */

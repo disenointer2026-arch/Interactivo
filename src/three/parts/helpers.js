@@ -21,8 +21,38 @@ export function group (...children) {
   return g
 }
 
+/** Profundidad de la cara del modelo en (x, y), interpolando su cuadrícula. */
+function faceDepth (face, x, y) {
+  const { x0, y0, step, rows } = face
+  const cols = rows[0].length
+  const fx = THREE.MathUtils.clamp((x - x0) / step, 0, cols - 1.001)
+  const fy = THREE.MathUtils.clamp((y - y0) / step, 0, rows.length - 1.001)
+  const i = Math.floor(fx)
+  const j = Math.floor(fy)
+  const tx = fx - i
+  const ty = fy - j
+  const a = rows[j][i] + (rows[j][i + 1] - rows[j][i]) * tx
+  const b = rows[j + 1][i] + (rows[j + 1][i + 1] - rows[j + 1][i]) * tx
+  return a + (b - a) * ty
+}
+
+/** Punto sobre la superficie de la cara del modelo. x, y están en medidas
+    procedurales; el resultado también, porque luego se escala con headFit. */
+function onModelFace (dims, x, y, lift) {
+  const [fx, fy, fz] = dims.headFit
+  const X = x * fx
+  const Y = y * fy
+  const e = 0.01
+  const dzx = (faceDepth(dims.face, X + e, Y) - faceDepth(dims.face, X - e, Y)) / (2 * e)
+  const dzy = (faceDepth(dims.face, X, Y + e) - faceDepth(dims.face, X, Y - e)) / (2 * e)
+  const n = new THREE.Vector3(-dzx * fx, -dzy * fy, fz).normalize()
+  const p = new THREE.Vector3(x, y, faceDepth(dims.face, X, Y) / fz).addScaledVector(n, lift)
+  return { p, n }
+}
+
 /** Punto sobre la superficie de la cabeza (elipsoide) a partir de x, y locales. */
 export function onHead (dims, x, y, lift = 0) {
+  if (dims.face) return onModelFace(dims, x, y, lift)
   const r = dims.headR
   const [sx, sy, sz] = dims.headScale
   const nx = x / (r * sx)

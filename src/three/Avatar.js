@@ -1,9 +1,9 @@
 import * as THREE from 'three'
 import gsap from 'gsap'
-import { computeDims } from './avatarDims.js'
+import { computeDims, fitToModel } from './avatarDims.js'
 import { createMaterialKit, KEY_TO_ROLE, roleColor } from './materials.js'
 import { createPart, disposeObject } from './PartLoader.js'
-import { getOption } from '../data/avatarOptions.js'
+import { getOption, BASE_MODELS } from '../data/avatarOptions.js'
 
 /* ==========================================================================
    AVATAR MODULAR
@@ -12,21 +12,23 @@ import { getOption } from '../data/avatarOptions.js'
    escala, orientación y cámara se conservan.
 
    parent 'head' → la pieza vive dentro de la cabeza (origen = centro de la cabeza)
+   parent 'face' → igual que 'head', pero se escala para encajar en la cabeza
+                   del modelo (cabello y rasgos procedurales)
    parent 'body' → la pieza vive en el cuerpo (origen = pies)
    ========================================================================== */
 export const SLOTS = [
   { slot: 'body', key: 'bodyType', parent: 'body' },
   { slot: 'head', key: null, parent: 'head' },
   { slot: 'ears', key: 'ears', parent: 'head' },
-  { slot: 'hair', key: 'hair', parent: 'head' },
-  { slot: 'eyes', key: 'eyes', parent: 'head' },
-  { slot: 'nose', key: 'nose', parent: 'head' },
-  { slot: 'mouth', key: 'mouth', parent: 'head' },
+  { slot: 'hair', key: 'hair', parent: 'face' },
+  { slot: 'eyes', key: 'eyes', parent: 'face' },
+  { slot: 'nose', key: 'nose', parent: 'face' },
+  { slot: 'mouth', key: 'mouth', parent: 'face' },
   { slot: 'shirt', key: 'shirt', parent: 'body' },
   { slot: 'pants', key: 'pants', parent: 'body' },
   { slot: 'shoes', key: 'shoes', parent: 'body' },
-  { slot: 'accHead', key: 'accHead', parent: 'head' },
-  { slot: 'accFace', key: 'accFace', parent: 'head' },
+  { slot: 'accHead', key: 'accHead', parent: 'face' },
+  { slot: 'accFace', key: 'accFace', parent: 'face' },
   { slot: 'accNeck', key: 'accNeck', parent: 'body' },
   { slot: 'companion', key: 'companion', parent: 'body' }
 ]
@@ -40,8 +42,10 @@ export class Avatar {
     this.root.name = 'avatar'
     this.bodyGroup = new THREE.Group()
     this.headGroup = new THREE.Group()
+    this.faceGroup = new THREE.Group()
     this.root.add(this.bodyGroup)
     this.bodyGroup.add(this.headGroup)
+    this.headGroup.add(this.faceGroup)
     this.parts = {}
     this.tokens = {}
     this.config = null
@@ -52,8 +56,7 @@ export class Avatar {
   /** Construye el avatar completo (sin transiciones). */
   async build (config) {
     this.config = { ...config }
-    this.dims = computeDims(this.config.bodyType)
-    this.headGroup.position.set(0, this.dims.headY, 0)
+    this._updateDims()
     await Promise.all(SLOTS.map(s => this._setSlot(s, false)))
     return this
   }
@@ -89,10 +92,16 @@ export class Avatar {
   async _rebuildAll () {
     const s = this.bodyGroup.scale
     if (this.animated) await gsap.to(s, { x: 1.08, y: 0.9, z: 1.08, duration: 0.16, ease: 'power2.in' })
-    this.dims = computeDims(this.config.bodyType)
-    this.headGroup.position.set(0, this.dims.headY, 0)
+    this._updateDims()
     await Promise.all(SLOTS.map(slot => this._setSlot(slot, false)))
     if (this.animated) gsap.to(s, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'elastic.out(1, 0.55)' })
+  }
+
+  _updateDims () {
+    const dims = computeDims(this.config.bodyType)
+    this.dims = BASE_MODELS.head ? fitToModel(dims) : dims
+    this.headGroup.position.set(0, this.dims.headY, 0)
+    this.faceGroup.scale.fromArray(this.dims.headFit || [1, 1, 1])
   }
 
   async _setSlot (def, animate) {
@@ -100,7 +109,9 @@ export class Avatar {
     this.tokens[def.slot] = token
 
     const id = def.key ? this.config[def.key] : 'default'
-    const option = (def.key && getOption(def.key, id)) || { id }
+    let option = (def.key && getOption(def.key, id)) || { id }
+    // Piezas fijas del personaje modelado (null = slot vacío, p. ej. orejas)
+    if (def.slot in BASE_MODELS) option = BASE_MODELS[def.slot] ? { id: 'base', model: BASE_MODELS[def.slot] } : { id: 'none' }
     const ctx = { dims: this.dims, M: createMaterialKit(this.config), config: this.config }
     const obj = await createPart(def.slot, option, ctx)
 
@@ -108,11 +119,13 @@ export class Avatar {
     if (this.tokens[def.slot] !== token) { disposeObject(obj); return }
 
     obj.name = def.slot
+    if (option.scale) obj.scale.fromArray(option.scale)
     obj.traverse(o => { if (o.isMesh) o.castShadow = true })
-    const parent = def.parent === 'head' ? this.headGroup : this.bodyGroup
+    const parent = { head: this.headGroup, face: this.faceGroup }[def.parent] || this.bodyGroup
     const old = this.parts[def.slot]
     this.parts[def.slot] = obj
     parent.add(obj)
+    this._applyHides()
 
     if (old) {
       if (animate) {
@@ -131,6 +144,16 @@ export class Avatar {
       obj.scale.setScalar(0.001)
       gsap.to(obj.scale, { x: target.x, y: target.y, z: target.z, duration: 0.55, delay: 0.12, ease: 'back.out(1.7)' })
     }
+  }
+
+  /** Oculta los slots que tapa la ropa elegida (p. ej. el vestido oculta el pantalón). */
+  _applyHides () {
+    const hidden = new Set()
+    SLOTS.forEach(s => {
+      const o = s.key && getOption(s.key, this.config[s.key])
+      if (o && o.hides) o.hides.forEach(h => hidden.add(h))
+    })
+    Object.entries(this.parts).forEach(([slot, obj]) => { obj.visible = !hidden.has(slot) })
   }
 
   _tweenRole (role, hex) {

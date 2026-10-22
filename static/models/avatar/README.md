@@ -1,14 +1,24 @@
 # Modelos del avatar (.glb)
 
-Coloca aquí las piezas del cuerpo, cabello, rostro y ropa. Enlázalas en
-`src/data/avatarOptions.js` escribiendo la ruta en el campo `model` de la opción:
+Exportados desde `Modelos.Interactivo` con `tools/blender/export_models.py`
+(Blender 3.6):
 
-    { id: 'long', name: 'Largo', model: 'models/avatar/hair_long.glb' }
+    blender -b --disable-autoexec --python tools/blender/export_models.py -- <carpeta con los .blend> static/models/avatar
+
+- `cuerpo.glb`: torso, brazos y piernas. Origen en el suelo, entre los pies.
+- `cabeza.glb`: cabeza y orejas. Origen en el centro de la cabeza.
+- `ropa/*.glb`: prendas, alineadas al cuerpo (origen en el suelo).
+
+El cuerpo y la cabeza se enlazan en `BASE_MODELS` y las prendas en el campo
+`model` de cada opción, ambos en `src/data/avatarOptions.js`.
 
 Reglas para que encajen:
-- Unidades en metros. La cabeza estándar mide ~1 m de diámetro (radio 0.5).
-- Piezas de CABEZA (cabello, ojos, nariz, boca, orejas): origen en el centro de la cabeza.
-- Piezas de CUERPO (cuerpo, camiseta, pantalón, zapatos): origen en el suelo, entre los pies.
-- Nombra los materiales con su rol para que se recoloreen con la paleta:
-  skin, hair, eye, mouth, shirt, pants, shoes. Otros nombres conservan su color.
-- Si el archivo no existe o falla, se usa el placeholder procedural automáticamente.
+- El script escala el personaje para que el centro de la cabeza quede a 1.4775 m.
+  Si cambia la cabeza, actualiza `MODEL` en `src/three/avatarDims.js`
+  (tamaño de la cabeza, mapa de la cara y manos).
+- Los materiales que se llaman "Piel" se renombran a `skin` y toman el tono de
+  piel elegido. Los demás conservan su textura.
+- La rugosidad con ruido procedural (el aspecto de plástico) se hornea en una
+  imagen dentro de cada .glb. El brillo final se ajusta con `PLASTIC` en
+  `src/three/materials.js`.
+- Si un archivo no existe o falla, se usa el placeholder procedural automáticamente.

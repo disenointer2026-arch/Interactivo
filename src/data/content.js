@@ -9,13 +9,7 @@ export const SITE = {
   disclaimer: 'Prototipo académico de Diseño Interactivo. Colaboración ficticia sin relación comercial con MINISO ni con Nintendo. Las marcas mencionadas pertenecen a sus titulares.'
 }
 
-/* Navegación del encabezado de las pantallas internas (estudio, pedido, tarjeta…) */
-export const NAV = [
-  { label: 'Colaboración', section: 'colaboracion' },
-  { label: 'Testimonios', section: 'testimonios' }
-]
-
-/* Secciones del sitio real de MINISO a las que apuntan el menú y el pie del inicio.
+/* Secciones del sitio real de MINISO a las que apuntan el menú y el pie.
    Cambia aquí una dirección y se actualiza en los dos sitios. */
 export const MINISO_LINKS = {
   marca: 'https://miniso.com/brand/index.html',
@@ -25,7 +19,7 @@ export const MINISO_LINKS = {
   social: 'https://miniso.com/social/'
 }
 
-/* Navegación del encabezado del inicio. Todo lo que empieza por http sale a
+/* Navegación del encabezado (todas las pantallas). Todo lo que empieza por http sale a
    miniso.com y se abre en una pestaña nueva. */
 export const HOME_NAV = [
   { label: 'Inicio', href: '#/' },
@@ -36,14 +30,14 @@ export const HOME_NAV = [
   { label: 'Responsabilidad social', href: MINISO_LINKS.social }
 ]
 
-/* Anclas dentro del inicio (menú lateral del inicio) */
+/* Anclas dentro del inicio (menú lateral) */
 export const SECTIONS = [
   { label: 'La colaboración', section: 'colaboracion' },
   { label: 'Cómo funciona', section: 'como-funciona' },
   { label: 'Testimonios', section: 'testimonios' }
 ]
 
-/* Menú lateral (según el sitemap) */
+/* Páginas informativas internas (#/info/…) */
 export const MENU = [
   { id: 'marca', label: 'Marca' },
   { id: 'productos', label: 'Productos' },
@@ -139,7 +133,7 @@ export const PEEK = [
   { src: 'images/personajes/wilbur.png', alt: 'Wilbur', x: 68, h: 260, show: 168, anim: 'sway', delay: -1.9, small: true }
 ]
 
-/* Pie de página del inicio (columnas del sitemap + datos de contacto).
+/* Pie de página (columnas del sitemap + datos de contacto).
    Si una columna lleva "href", su título también es un enlace. */
 export const FOOTER = {
   inquiriesLabel: 'Consultas de franquicia',
@@ -175,32 +169,32 @@ export const TESTIMONIALS = [
   {
     name: 'Valentina', place: 'Cali',
     quote: 'Le puse mis gafas redondas y mi bufanda roja. Cuando llegó la figura, mi mamá dijo que era yo en miniatura.',
-    avatar: { hair: 'bob', hairColor: '#3F3B33', accFace: 'roundglasses', accNeck: 'scarf', shirt: 'basic', shirtColor: '#F6F1E6', skin: '#FFAF7D', mouth: 'open', mouthColor: '#E0706A' }
+    avatar: { hair: 'bob', hairColor: '#3F3B33', accFace: 'roundglasses', accNeck: 'scarf', shirt: 'camisa', shirtColor: '#F6F1E6', skin: '#FFAF7D', mouth: 'open', mouthColor: '#E0706A' }
   },
   {
     name: 'Andrés', place: 'Medellín',
     quote: 'Pensé que iba a tardar dos minutos y me quedé media hora probando peinados. La tarjeta la tengo de fondo de pantalla.',
-    avatar: { hair: 'spiky', hairColor: '#C05333', shirt: 'hoodie', shirtColor: '#3A4A5A', accHead: 'headphones', skin: '#C6815D', eyes: 'big', eyeColor: '#9C7657' }
+    avatar: { hair: 'spiky', hairColor: '#C05333', shirt: 'chaqueta', shirtColor: '#3A4A5A', accHead: 'headphones', skin: '#C6815D', eyes: 'big', eyeColor: '#9C7657' }
   },
   {
     name: 'Mariana', place: 'Bogotá',
     quote: 'Me encantó poder poner a mi gata. Es el regalo de cumpleaños más personal que le he dado a mi hermana.',
-    avatar: { hair: 'long', hairColor: '#D2CA7F', shirt: 'dress', shirtColor: '#F2A7B8', companion: 'cat', skin: '#FFDCC6', eyes: 'happy', accHead: 'flower' }
+    avatar: { hair: 'long', hairColor: '#D2CA7F', shirt: 'vestido', shirtColor: '#F2A7B8', companion: 'cat', skin: '#FFDCC6', eyes: 'happy', accHead: 'flower' }
   },
   {
     name: 'Samuel', place: 'Barranquilla',
     quote: 'Recogí mi pedido en la tienda y ya venía en una cajita con ventana. Se siente como un coleccionable de verdad.',
-    avatar: { hair: 'curly', hairColor: '#3F3B33', shirt: 'polo', shirtColor: '#F6D365', skin: '#AF735C', accHead: 'strawhat', companion: 'shopbag' }
+    avatar: { hair: 'curly', hairColor: '#3F3B33', shirt: 'chaqueta-2', shirtColor: '#F6D365', skin: '#AF735C', accHead: 'strawhat', companion: 'shopbag' }
   },
   {
     name: 'Lucía', place: 'Pereira',
     quote: 'Nada de plantillas: cada decisión la tomé yo. Por eso se siente mío.',
-    avatar: { hair: 'buns', hairColor: '#F89FAD', shirt: 'stripes', shirtColor: '#7FB3D5', skin: '#FFCCAB', accFace: 'blush', eyes: 'almond', eyeColor: '#9B97A2' }
+    avatar: { hair: 'buns', hairColor: '#F89FAD', shirt: 'camisa-2', shirtColor: '#7FB3D5', skin: '#FFCCAB', accFace: 'blush', eyes: 'almond', eyeColor: '#9B97A2' }
   },
   {
     name: 'Tomás', place: 'Cartagena',
     quote: 'Hice uno para mí y otro para mi abuelo, con su sombrero y su perro. Los dos están en su repisa.',
-    avatar: { hair: 'none', shirt: 'polo', shirtColor: '#F6F1E6', skin: '#AF735C', accHead: 'cap', companion: 'dog', accFace: 'roundglasses' }
+    avatar: { hair: 'none', shirt: 'manga-larga', shirtColor: '#F6F1E6', skin: '#AF735C', accHead: 'cap', companion: 'dog', accFace: 'roundglasses' }
   }
 ]
 
