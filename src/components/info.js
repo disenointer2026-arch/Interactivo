@@ -12,10 +12,9 @@ export const infoView = {
       <section class="info wrap" aria-labelledby="info-title">
         <div class="info-card">
           <span class="info-leaf" aria-hidden="true">${leafDeco('#9ACB8A')}</span>
-          <p class="eyebrow">MINISO</p>
           <h1 id="info-title">${esc(page.title)}</h1>
           <p>${esc(page.body)}</p>
-          <a class="btn btn--primary" href="#/personalizar">${icon('sparkle')}<span>Personalizar mi avatar</span></a>
+          <a class="choice-card choice-card--row choice-card--primary info-cta" href="#/personalizar"><strong>¡Hacer mi avatar!</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></a>
         </div>
         <nav class="info-nav" aria-label="Otras páginas">
           ${MENU.map(m => `<a href="#/info/${m.id}" ${m.id === id ? 'aria-current="page"' : ''}>${esc(m.label)}</a>`).join('')}

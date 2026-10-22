@@ -24,6 +24,19 @@ let activeCat = CATEGORIES[0].id
 let thumbGen = 0
 let root = null
 let keyHandler = null
+let leafTimer = null
+
+/* Hoja de "guardado": el avatar se guarda solo en el navegador con cada cambio;
+   la hoja aparece unos segundos en la esquina inferior izquierda para indicarlo. */
+function flashSaveLeaf () {
+  const leaf = $('.save-leaf', root)
+  if (!leaf) return
+  leaf.classList.remove('is-on')
+  void leaf.offsetWidth // reinicia la animación si ya estaba visible
+  leaf.classList.add('is-on')
+  clearTimeout(leafTimer)
+  leafTimer = setTimeout(() => leaf.classList.remove('is-on'), 2500)
+}
 
 function template () {
   return `
@@ -53,16 +66,15 @@ function template () {
         <button type="button" class="tool" data-act="zoomOut" aria-label="Alejar">${icon('zoomOut')}</button>
         <button type="button" class="tool" data-act="zoomIn" aria-label="Acercar">${icon('zoomIn')}</button>
       </div>
-      <p class="stage-hint">Arrastra para girar. Usa la rueda o pellizca para acercar.</p>
+      <p class="stage-hint">Arrastra para ver desde el ángulo que quieras</p>
+      <span class="save-leaf" aria-hidden="true" title="Cambios guardados en este navegador"></span>
     </div>
-    <p class="studio-note">Los datos de creación se guardan en este navegador <span class="studio-note-icon" aria-hidden="true"></span></p>
 
     <aside class="studio-panel" aria-label="Opciones de personalización">
       <h1 class="panel-title">¿Cómo te ves?</h1>
       <div class="cat-tabs" role="tablist" aria-label="Categorías">${tabsHTML()}</div>
       <div class="cat-panel" id="catPanel" role="tabpanel" tabindex="0"></div>
       <div class="panel-actions">
-        ${mainButton('save', 'Guardar')}
         ${mainButton('done', 'Confirmar')}
       </div>
     </aside>
@@ -246,9 +258,6 @@ function onAction (act) {
       break
     }
     case 'help': openInstructions(); break
-    case 'save':
-      if (store.save()) { toast('Creación guardada'); sound.play('success') } else toast('No se pudo guardar en este navegador', { iconName: 'close' })
-      break
     case 'done':
       sound.fx('confirm')
       store.save()
@@ -287,6 +296,7 @@ function onTabKeys (e) {
 /* Cuando cambia el estado, el avatar 3D reacciona */
 async function onStoreChange (state, meta) {
   syncSelection()
+  flashSaveLeaf()
   if (!stage) return
   const changed = await stage.avatar.apply(state)
   if (meta.type === 'set' && changed.length) {
@@ -359,6 +369,7 @@ export const customizerView = {
   unmount () {
     thumbGen++
     closeInstructions()
+    clearTimeout(leafTimer)
     unsubscribe && unsubscribe()
     window.removeEventListener('keydown', keyHandler)
     stage && stage.detach()

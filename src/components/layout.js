@@ -1,4 +1,4 @@
-import { NAV, MENU, SITE, HOME_NAV, SECTIONS, FOOTER } from '../data/content.js'
+import { SITE, HOME_NAV, SECTIONS, FOOTER } from '../data/content.js'
 import { icon } from '../utils/icons.js'
 import { goSection } from '../utils/router.js'
 import { sound } from '../utils/sound.js'
@@ -6,11 +6,7 @@ import { createDialog, openDialog, closeDialog } from './dialog.js'
 
 /* ==========================================================================
    ENCABEZADO Y PIE DE PÁGINA
-   Hay dos versiones de cada uno y el CSS muestra la que toca según la ruta
-   (body[data-route]):
-     · inicio  → .hh-* (encabezado) y .hf-* (pie): diseño nuevo del inicio
-     · resto   → .header-inner y .footer-inner: estudio, pedido, tarjeta…
-   Usan clases distintas para que los estilos de una no afecten a la otra.
+   El mismo encabezado (.hh-*), menú lateral y pie (.hf-*) en todas las pantallas.
    ========================================================================== */
 
 /** Logotipo tipográfico de la colaboración (sin isotipos oficiales). */
@@ -27,15 +23,6 @@ const out = href => href.startsWith('http') ? ' target="_blank" rel="noopener no
 
 export function renderHeader (el) {
   el.innerHTML = `
-    <div class="header-inner">
-      <a class="header-brand" href="#/" aria-label="Inicio: MINISO por Animal Crossing">${lockup()}</a>
-      <nav class="header-nav" aria-label="Principal">
-        ${NAV.map(n => `<button type="button" class="nav-link" data-section="${n.section}">${n.label}</button>`).join('')}
-        <button type="button" class="nav-link nav-menu" data-open-menu="app" aria-haspopup="dialog">${icon('menu')}<span>Menú</span></button>
-      </nav>
-      <a class="header-cta" href="#/personalizar">${icon('sparkle')}<span>Personalizar</span></a>
-    </div>
-
     <div class="hh-inner">
       <a class="hh-brand" href="#/" aria-label="Inicio: MINISO × Animal Crossing">
         <img class="hh-mark" src="images/logo-miniso.png" alt="" width="1000" height="1175" />
@@ -46,35 +33,12 @@ export function renderHeader (el) {
       </nav>
       <div class="hh-end">
         <button type="button" class="icon-btn hh-sound" data-sound></button>
-        <button type="button" class="icon-btn hh-menu" data-open-menu="home" aria-haspopup="dialog" aria-label="Abrir menú">${icon('menu')}</button>
+        <button type="button" class="icon-btn hh-menu" data-open-menu aria-haspopup="dialog" aria-label="Abrir menú">${icon('menu')}</button>
       </div>
     </div>`
 
-  /* Menú lateral de las pantallas internas */
-  const appDrawer = createDialog({
-    className: 'drawer',
-    label: 'Menú',
-    html: `
-      <div class="drawer-head">
-        ${lockup()}
-        <button type="button" class="icon-btn" data-close aria-label="Cerrar menú">${icon('close')}</button>
-      </div>
-      <nav aria-label="Menú del sitio">
-        <p class="drawer-label">La colaboración</p>
-        <ul class="drawer-list">
-          ${NAV.map(n => `<li><button type="button" data-section="${n.section}">${n.label}</button></li>`).join('')}
-          <li><a href="#/personalizar">Personalización</a></li>
-        </ul>
-        <p class="drawer-label">MINISO</p>
-        <ul class="drawer-list">
-          ${MENU.map(m => `<li><a href="#/info/${m.id}">${m.label}</a></li>`).join('')}
-        </ul>
-      </nav>
-      <a class="btn btn--primary btn--block" href="#/personalizar">Personalizar mi avatar</a>`
-  })
-
-  /* Menú lateral del inicio */
-  const homeDrawer = createDialog({
+  /* Menú lateral (en pantallas estrechas sustituye a la navegación) */
+  const drawer = createDialog({
     className: 'drawer drawer--home',
     label: 'Menú',
     html: `
@@ -96,7 +60,7 @@ export function renderHeader (el) {
       <a class="btn btn--primary btn--block btn--cta" href="#/personalizar">¡Hacer mi avatar!</a>`
   })
 
-  /* Interruptor de sonido del inicio: música de ambiente + sonidos de la interfaz */
+  /* Interruptor de sonido: música de ambiente + sonidos de la interfaz */
   const soundBtn = el.querySelector('[data-sound]')
   const paintSound = () => {
     const on = sound.enabled
@@ -110,22 +74,17 @@ export function renderHeader (el) {
   paintSound()
 
   el.addEventListener('click', e => {
-    const s = e.target.closest('[data-section]')
-    if (s) goSection(s.dataset.section)
-    const menu = e.target.closest('[data-open-menu]')
-    if (menu) openDialog(menu.dataset.openMenu === 'home' ? homeDrawer : appDrawer)
+    if (e.target.closest('[data-open-menu]')) openDialog(drawer)
     if (e.target.closest('[data-sound]')) sound.toggle()
   })
-  ;[appDrawer, homeDrawer].forEach(drawer => {
-    drawer.addEventListener('click', e => {
-      if (e.target.closest('[data-close]')) closeDialog(drawer)
-      const s = e.target.closest('[data-section]')
-      if (s) closeDialog(drawer, () => goSection(s.dataset.section))
-      if (e.target.closest('a')) closeDialog(drawer)
-    })
+  drawer.addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) closeDialog(drawer)
+    const s = e.target.closest('[data-section]')
+    if (s) closeDialog(drawer, () => goSection(s.dataset.section))
+    if (e.target.closest('a')) closeDialog(drawer)
   })
 
-  /* Marca el enlace de la página actual en el encabezado del inicio */
+  /* Marca el enlace de la página actual */
   const mark = () => {
     const hash = location.hash || '#/'
     el.querySelectorAll('.hh-link').forEach(a => {
@@ -144,13 +103,6 @@ export function renderHeader (el) {
 
 export function renderFooter (el) {
   el.innerHTML = `
-    <div class="footer-inner">
-      <div class="footer-brand">${lockup()}<p>${SITE.disclaimer}</p></div>
-      <nav class="footer-nav" aria-label="Pie de página">
-        ${MENU.map(m => `<a href="#/info/${m.id}">${m.label}</a>`).join('')}
-      </nav>
-    </div>
-
     <div class="hf">
       <img class="hf-mark" src="images/cara-miniso.png" alt="" aria-hidden="true" loading="lazy" />
       <div class="hf-inner">

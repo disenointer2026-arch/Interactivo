@@ -70,9 +70,10 @@ export function cardSerial (avatar) {
  */
 export async function drawCard (o) {
   await Promise.all([
-    document.fonts.load('800 60px "Baloo 2"'),
+    document.fonts.load('900 60px "Nunito"'),
+    document.fonts.load('800 32px "Nunito"'),
     document.fonts.load('700 30px "Nunito"'),
-    document.fonts.load('400 40px "Archivo Black"')
+    document.fonts.load('1000 34px "Nunito"')
   ]).catch(() => {})
 
   const theme = CARD.themes.find(t => t.id === o.theme) || CARD.themes[0]
@@ -160,13 +161,13 @@ export async function drawCard (o) {
   // Encabezado: lockup tipográfico
   ctx.textBaseline = 'middle'
   ctx.fillStyle = RED
-  ctx.font = '400 34px "Archivo Black", "Arial Black", sans-serif'
+  ctx.font = '1000 34px "Nunito", sans-serif'
   ctx.fillText('MINISO', 52, 62)
   const mw = ctx.measureText('MINISO').width
   ctx.fillStyle = INK
   ctx.font = '700 28px "Nunito", sans-serif'
   ctx.fillText('×', 52 + mw + 12, 62)
-  ctx.font = '800 32px "Baloo 2", sans-serif'
+  ctx.font = '900 32px "Nunito", sans-serif'
   ctx.fillStyle = '#2F5D46'
   ctx.fillText('Animal Crossing', 52 + mw + 40, 64)
   // Serie
@@ -190,7 +191,7 @@ export async function drawCard (o) {
   ctx.textAlign = 'center'
   let size = 60
   const name = (o.name || 'Tu avatar').slice(0, 18)
-  do { ctx.font = `800 ${size}px "Baloo 2", sans-serif`; size -= 2 } while (ctx.measureText(name).width > CARD_W - 260 && size > 30)
+  do { ctx.font = `900 ${size}px "Nunito", sans-serif`; size -= 2 } while (ctx.measureText(name).width > CARD_W - 260 && size > 30)
   ctx.fillText(name, CARD_W / 2, py + 52)
 
   // Datos del personaje (el cumpleaños solo aparece cuando se ha elegido)
@@ -206,7 +207,7 @@ export async function drawCard (o) {
     ctx.fillText(k, 108, y)
     ctx.globalAlpha = 1
     ctx.textAlign = 'right'
-    ctx.font = '800 32px "Baloo 2", sans-serif'
+    ctx.font = '800 32px "Nunito", sans-serif'
     ctx.fillText(v, CARD_W - 64, y + 2)
     ctx.strokeStyle = 'rgba(58,46,40,.12)'
     ctx.lineWidth = 2
@@ -222,7 +223,7 @@ export async function drawCard (o) {
   rr(ctx, 52, fy - 26, 190, 52, 26); ctx.fill()
   ctx.fillStyle = '#FFFFFF'
   ctx.textAlign = 'center'
-  ctx.font = '800 26px "Baloo 2", sans-serif'
+  ctx.font = '800 26px "Nunito", sans-serif'
   ctx.fillText('Hecho por ti', 147, fy + 2)
   ctx.textAlign = 'right'
   ctx.fillStyle = INK

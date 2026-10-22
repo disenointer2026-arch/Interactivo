@@ -69,8 +69,8 @@ function stepProduct () {
       </div>
     </div>
     <div class="step-actions">
-      <a class="btn btn--quiet" href="#/listo">${icon('arrowLeft')}<span>Volver</span></a>
-      <button type="button" class="btn btn--primary" data-next>Continuar</button>
+      <a class="choice-card choice-card--row" href="#/listo"><strong>Volver</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowLeft')}</i></a>
+      <button type="button" class="choice-card choice-card--row choice-card--primary" data-next><strong>Continuar</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
     </div>`
 }
 
@@ -114,8 +114,8 @@ function stepData () {
       </div>
     </form>
     <div class="step-actions">
-      <button type="button" class="btn btn--quiet" data-prev>${icon('arrowLeft')}<span>Atrás</span></button>
-      <button type="button" class="btn btn--primary" data-next>Continuar al pago</button>
+      <button type="button" class="choice-card choice-card--row" data-prev><strong>Atrás</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowLeft')}</i></button>
+      <button type="button" class="choice-card choice-card--row choice-card--primary" data-next><strong>Continuar al pago</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
     </div>`
 }
 
@@ -133,8 +133,8 @@ function stepPay () {
     </div>
     <form class="form-grid pay-form" id="payForm" novalidate>${payFields()}</form>
     <div class="step-actions">
-      <button type="button" class="btn btn--quiet" data-prev>${icon('arrowLeft')}<span>Atrás</span></button>
-      <button type="button" class="btn btn--primary btn--lg" data-finish>${icon('lock')}<span>Finalizar pago · <span data-total>${cop(totals().total)}</span></span></button>
+      <button type="button" class="choice-card choice-card--row" data-prev><strong>Atrás</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowLeft')}</i></button>
+      <button type="button" class="choice-card choice-card--row choice-card--primary" data-finish><strong>Finalizar pago · <span data-total>${cop(totals().total)}</span></strong><i class="choice-card-arrow" aria-hidden="true">${icon('lock')}</i></button>
     </div>`
 }
 
@@ -175,13 +175,14 @@ function summaryAside () {
 function template () {
   return `
   <section class="order wrap" aria-labelledby="order-title">
-    <header class="order-head">
-      <p class="eyebrow">${icon('bag')} Materializa tu creación</p>
-      <h1 id="order-title">Pide tu producto</h1>
-      <div id="stepper">${stepper()}</div>
-    </header>
     <div class="order-grid">
-      <div class="order-main"><div class="step-body" id="stepBody"></div></div>
+      <div class="order-col">
+        <header class="order-head">
+          <h1 id="order-title">Pide tu producto</h1>
+          <div id="stepper">${stepper()}</div>
+        </header>
+        <div class="order-main"><div class="step-body" id="stepBody"></div></div>
+      </div>
       <aside class="order-aside" id="orderAside" aria-label="Resumen del pedido">${summaryAside()}</aside>
     </div>
   </section>`
@@ -327,10 +328,9 @@ function finish () {
   const overlay = document.createElement('div')
   overlay.className = 'pay-loading'
   overlay.setAttribute('role', 'status')
-  overlay.innerHTML = `<div class="pay-loading-card"><span class="spinner-leaf">${icon('leaf')}</span><p>${draft.payment === 'pse' ? 'Conectando con tu banco…' : 'Procesando tu pago…'}</p><small>Simulación, sin cargos reales</small></div>`
+  overlay.innerHTML = `<div class="pay-loading-card"><span class="pay-leaf" aria-hidden="true"></span><p>${draft.payment === 'pse' ? 'Conectando con tu banco…' : 'Procesando tu pago…'}</p><small>Simulación, sin cargos reales</small></div>`
   document.body.appendChild(overlay)
   gsap.from(overlay, { autoAlpha: 0, duration: 0.25 })
-  gsap.to($('.spinner-leaf', overlay), { rotation: 360, repeat: -1, duration: 1.4, ease: 'none' })
 
   const now = Date.now()
   const number = 'MXAC-' + hashString(now + draft.customer.email).toString(36).toUpperCase().slice(0, 6).padStart(6, '0')

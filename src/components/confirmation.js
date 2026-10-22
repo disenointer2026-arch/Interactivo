@@ -14,7 +14,7 @@ function empty () {
   return `<section class="confirm wrap confirm--empty">
     <h1>Aún no tienes pedidos</h1>
     <p class="muted">Crea tu avatar y pide tu producto para ver aquí la confirmación.</p>
-    <a class="btn btn--primary" href="#/personalizar">Personalizar mi avatar</a>
+    <a class="choice-card choice-card--row choice-card--primary confirm-cta" href="#/personalizar"><strong>¡Hacer mi avatar!</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></a>
   </section>`
 }
 
@@ -45,9 +45,9 @@ function template (o) {
           <div><dt>Fecha</dt><dd>${esc(date)}</dd></div>
           <div class="os-total"><dt>Total</dt><dd>${cop(o.total)}</dd></div>
         </dl>
-        <div class="choice-row choice-row--compact">
-          <a class="btn btn--choice" href="#/tarjeta"><span class="choice-icon">${icon('card')}</span><span class="choice-copy"><strong>Crear tarjeta Amiibo</strong><span>Tu coleccionable digital</span></span></a>
-          <button type="button" class="btn btn--choice" data-finish><span class="choice-icon">${icon('check')}</span><span class="choice-copy"><strong>Finalizar</strong><span>Volver al inicio</span></span></button>
+        <div class="final-actions">
+          <a class="choice-card" href="#/tarjeta"><strong>Crear tarjeta Amiibo</strong><span>Tu coleccionable digital</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></a>
+          <button type="button" class="choice-card" data-finish><strong>Finalizar</strong><span>Volver al inicio</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
         </div>
       </div>
     </div>

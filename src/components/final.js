@@ -53,36 +53,56 @@ function template () {
     </div>
 
     <div class="final-panel">
-      <p class="eyebrow">${icon('sparkle')} Contempla tu creación</p>
       <h1 id="final-title" class="final-title">¡Tu avatar está listo!</h1>
-      <p class="final-lead">Cada detalle lo decidiste tú. Gíralo, míralo con calma y elige cómo quieres llevarlo contigo.</p>
+      <p class="final-lead">Sé cuánto trabajo requiere crear tu propio estilo. ¡Lo estás haciendo increíble!</p>
 
       <label class="field">
         <span class="field-label">Ponle nombre</span>
         <input class="input" id="avatarName" type="text" maxlength="18" autocomplete="off" placeholder="Tu avatar" value="${esc(name)}" />
       </label>
 
-      <details class="summary-box" open>
+      <details class="summary-box">
         <summary>Resumen de tu avatar</summary>
-        <dl class="summary-list">
-          ${summaryItems(s).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}
-        </dl>
-        <ul class="color-list" aria-label="Colores elegidos">${colorDots(s)}</ul>
+        <div class="summary-body">
+          <dl class="summary-list">
+            ${summaryItems(s).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}
+          </dl>
+          <ul class="color-list" aria-label="Colores elegidos">${colorDots(s)}</ul>
+        </div>
       </details>
+      <p class="summary-hint" aria-hidden="true"><span class="hint-closed">Presiona para desplegar</span><span class="hint-open">Presiona para cerrar</span></p>
 
-      <div class="choice-row">
-        <a class="btn btn--choice" href="#/pedido">
-          <span class="choice-icon">${icon('bag')}</span>
-          <span class="choice-copy"><strong>Pedir mi producto</strong><span>Figura con cadena y base de acrílico</span></span>
-        </a>
-        <a class="btn btn--choice" href="#/tarjeta">
-          <span class="choice-icon">${icon('card')}</span>
-          <span class="choice-copy"><strong>Crear tarjeta Amiibo</strong><span>Coleccionable digital para compartir</span></span>
-        </a>
+      <div class="final-actions">
+        <a class="choice-card" href="#/pedido"><strong>Pedir mi producto</strong><span>Figura con cadena y base de acrílico</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></a>
+        <a class="choice-card" href="#/tarjeta"><strong>Crear tarjeta Amiibo</strong><span>Coleccionable digital para compartir</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></a>
       </div>
-      <a class="btn btn--quiet final-back" href="#/personalizar">${icon('edit')}<span>Seguir editando</span></a>
+      <a class="choice-card choice-card--row final-back" href="#/personalizar"><strong>Seguir editando</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowLeft')}</i></a>
     </div>
   </section>`
+}
+
+/* Resumen plegable: en vez del cambio brusco del <details>, el contenido crece o se
+   encoge con una animación de altura y opacidad. Mientras se cierra, la clase
+   is-closing gira la flecha de inmediato aunque el <details> siga abierto. */
+function animateSummary (root) {
+  const box = $('.summary-box', root)
+  const body = $('.summary-body', box)
+  $('summary', box).addEventListener('click', e => {
+    e.preventDefault()
+    if (box.classList.contains('is-animating')) return
+    if (REDUCED_MOTION) { box.open = !box.open; return }
+    box.classList.add('is-animating')
+    const done = () => box.classList.remove('is-animating', 'is-closing')
+    if (!box.open) {
+      // Se pliega antes de abrir para que no asome un cuadro a su altura completa
+      gsap.set(body, { height: 0, autoAlpha: 0, y: -6 })
+      box.open = true
+      gsap.to(body, { height: 'auto', autoAlpha: 1, y: 0, duration: 0.45, ease: 'power2.out', clearProps: 'height,transform', onComplete: done })
+    } else {
+      box.classList.add('is-closing')
+      gsap.to(body, { height: 0, autoAlpha: 0, y: -6, duration: 0.35, ease: 'power2.inOut', onComplete: () => { box.open = false; gsap.set(body, { clearProps: 'all' }); done() } })
+    }
+  })
 }
 
 function confetti (root) {
@@ -109,6 +129,7 @@ export const finalView = {
     sound.play('success')
 
     $('#avatarName', root).addEventListener('input', e => store.setProfile({ name: e.target.value.trim() }))
+    animateSummary(root)
     root.addEventListener('click', e => {
       const act = e.target.closest('[data-act]')?.dataset.act
       if (!act || !stage) return

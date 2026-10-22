@@ -77,7 +77,6 @@ function template () {
     </div>
 
     <div class="card-panel">
-      <p class="eyebrow">${icon('card')} Tarjeta coleccionable</p>
       <h1 id="card-title">Crea tu tarjeta Amiibo</h1>
       <p class="muted">Se generó a partir de tu avatar. Ajusta sus datos y el fondo: la tarjeta cambia al instante.</p>
 
@@ -93,12 +92,12 @@ function template () {
 
       <div class="ready" id="ready" hidden>
         <h2 class="ready-title">¡Tu tarjeta está lista!</h2>
-        <div class="choice-row choice-row--compact">
-          <button type="button" class="btn btn--choice" data-share><span class="choice-icon">${icon('share')}</span><span class="choice-copy"><strong>Compartir</strong><span>Descárgala o compártela</span></span></button>
-          <button type="button" class="btn btn--choice" data-finish><span class="choice-icon">${icon('check')}</span><span class="choice-copy"><strong>Finalizar</strong><span>Volver al inicio</span></span></button>
+        <div class="final-actions">
+          <button type="button" class="choice-card" data-share><strong>Compartir</strong><span>Descárgala o compártela</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
+          <button type="button" class="choice-card" data-finish><strong>Finalizar</strong><span>Volver al inicio</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
         </div>
       </div>
-      <a class="btn btn--quiet" href="#/listo">${icon('arrowLeft')}<span>Volver a mi avatar</span></a>
+      <a class="choice-card choice-card--row" href="#/listo"><strong>Volver a mi avatar</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowLeft')}</i></a>
     </div>
   </section>`
 }
@@ -176,8 +175,8 @@ function openShare () {
             <h2 class="modal-title">Comparte tu tarjeta</h2>
             <p class="muted">Descárgala como imagen o elige una red. Es una simulación: no se publicará nada.</p>
             <div class="share-actions">
-              <a class="btn btn--primary btn--block" data-download download>${icon('download')}<span>Descargar imagen</span></a>
-              <button type="button" class="btn btn--secondary btn--block" data-native hidden>${icon('share')}<span>Compartir desde el dispositivo</span></button>
+              <a class="choice-card choice-card--row choice-card--primary" data-download download><strong>Descargar imagen</strong><i class="choice-card-arrow" aria-hidden="true">${icon('download')}</i></a>
+              <button type="button" class="choice-card choice-card--row" data-native hidden><strong>Compartir desde el dispositivo</strong><i class="choice-card-arrow" aria-hidden="true">${icon('share')}</i></button>
             </div>
             <p class="share-label">Redes sociales (simulado)</p>
             <div class="social-row">
