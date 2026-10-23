@@ -157,12 +157,13 @@ info['head_front_web'] = round(-fmn.y, 4)
 
 # ---------------------------------------------------------------- Prendas
 # archivo, salida, familia ('char' ya alineada | 'overol' modelada sobre la copia del overol),
-# ubicación corregida para las copias desplazadas (la de su prenda gemela)
+# ubicación corregida para las copias desplazadas (la de su prenda gemela) y, opcional,
+# un ajuste fino ya en metros de la página (la chaqueta quedaba 2 cm a la izquierda)
 GARMENTS = [
     ('camisa - copia.blend', 'camisa', 'overol', None),
     ('Camisa.2 - copia.blend', 'camisa-2', 'overol', (0.0379, -0.2013, 1.4328)),
     ('camisa.manga.larga - copia.blend', 'manga-larga', 'overol', None),
-    ('Chaqueta - copia.blend', 'chaqueta', 'overol', None),
+    ('Chaqueta - copia.blend', 'chaqueta', 'overol', None, (0.0204, 0, 0)),
     ('Chaqueta.2 - copia.blend', 'chaqueta-2', 'overol', (0.0379, -0.2013, 1.4328)),
     ('vestido - copia.blend', 'vestido', 'overol', None),
     ('Jean - copia.blend', 'jean', 'char', None),
@@ -171,7 +172,7 @@ GARMENTS = [
     ('Overol - copia.blend', 'overol', 'overol', None),
 ]
 info['garments'] = {}
-for fname, out, family, fix_loc in GARMENTS:
+for fname, out, family, fix_loc, *nudge in GARMENTS:
     open_blend(fname)
     meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.visible_get()]
     for o in meshes:
@@ -179,7 +180,7 @@ for fname, out, family, fix_loc in GARMENTS:
             o.location = fix_loc
     bpy.context.view_layer.update()
     delta = OVEROL_TO_CHAR if family == 'overol' else Vector((0, 0, 0))
-    apply_matrix(meshes, M @ Matrix.Translation(delta))
+    apply_matrix(meshes, Matrix.Translation(Vector(nudge[0] if nudge else (0, 0, 0))) @ M @ Matrix.Translation(delta))
     bake_roughness(meshes)
     rename_skin(meshes)
     export(meshes, os.path.join(OUT, 'ropa', out + '.glb'))

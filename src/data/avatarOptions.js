@@ -111,14 +111,17 @@ export const CATEGORIES = [
     camera: 'head',
     groups: [
       {
-        key: 'eyes', label: 'Ojos', type: 'options', thumb: 'bust',
+        // Cuatro por fila, en el orden de los botones del diseño
+        key: 'eyes', label: 'Ojos', type: 'images', columns: 4,
         options: [
-          { id: 'round', name: 'Redondos' },
-          { id: 'big', name: 'Brillantes' },
-          { id: 'almond', name: 'Almendra' },
-          { id: 'happy', name: 'Felices' },
-          { id: 'sleepy', name: 'Soñolientos' },
-          { id: 'dot', name: 'Puntitos' }
+          { id: 'lashes', name: 'Con pestaña', image: 'images/ui/botones-ojos-01.png' },
+          { id: 'classic', name: 'Clásicos', image: 'images/ui/botones-ojos-02.png' },
+          { id: 'lashesTop', name: 'Pestañas arriba', image: 'images/ui/botones-ojos-03.png' },
+          { id: 'sleepy', name: 'Soñolientos', image: 'images/ui/botones-ojos-04.png' },
+          { id: 'soft', name: 'Suaves', image: 'images/ui/botones-ojos-08.png' },
+          { id: 'brow', name: 'Con ceja', image: 'images/ui/botones-ojos-07.png' },
+          { id: 'lashesBottom', name: 'Pestañas abajo', image: 'images/ui/botones-ojos-06.png' },
+          { id: 'happy', name: 'Sonrientes', image: 'images/ui/botones-ojos-05.png' }
         ]
       },
       { key: 'eyeColor', label: 'Color de ojos', type: 'colors', options: EYE_COLORS }
@@ -156,7 +159,7 @@ export const CATEGORIES = [
     groups: [
       {
         /* model: prenda .glb · builder: placeholder si el modelo no carga
-           hides: slots que se ocultan al usarla · scale: ajuste para que quede por encima */
+           hides: grupos que se ocultan al usarla (para que los modelos no se atraviesen) */
         key: 'shirt', label: 'Parte superior', type: 'options', thumb: 'part',
         options: [
           { id: 'camisa', name: 'Camiseta manzana', model: 'models/avatar/ropa/camisa.glb', builder: 'basic' },
@@ -164,7 +167,7 @@ export const CATEGORIES = [
           { id: 'manga-larga', name: 'Manga larga', model: 'models/avatar/ropa/manga-larga.glb', builder: 'hoodie' },
           { id: 'chaqueta', name: 'Chaqueta negra', model: 'models/avatar/ropa/chaqueta.glb', builder: 'hoodie' },
           { id: 'chaqueta-2', name: 'Chaqueta de jean', model: 'models/avatar/ropa/chaqueta-2.glb', builder: 'polo' },
-          { id: 'vestido', name: 'Vestido', model: 'models/avatar/ropa/vestido.glb', builder: 'dress', hides: ['pants'] }
+          { id: 'vestido', name: 'Vestido', model: 'models/avatar/ropa/vestido.glb', builder: 'dress' }
         ]
       },
       {
@@ -173,7 +176,7 @@ export const CATEGORIES = [
           { id: 'jean', name: 'Jean', model: 'models/avatar/ropa/jean.glb', builder: 'jeans' },
           { id: 'short', name: 'Short', model: 'models/avatar/ropa/short.glb', builder: 'shorts' },
           { id: 'falda', name: 'Falda', model: 'models/avatar/ropa/falda.glb', builder: 'skirt' },
-          { id: 'overol', name: 'Overol', model: 'models/avatar/ropa/overol.glb', builder: 'overalls', scale: [1.06, 1, 1.06] }
+          { id: 'overol', name: 'Overol', model: 'models/avatar/ropa/overol.glb', builder: 'overalls', hides: ['shirt'] }
         ]
       },
       {
@@ -218,8 +221,8 @@ export const DEFAULT_AVATAR = {
   skin: '#FFD8B5',
   hair: 'short',
   hairColor: '#5A3932',
-  eyes: 'round',
-  eyeColor: '#616972',
+  eyes: 'classic',
+  eyeColor: '#9C7657',
   nose: 'button',
   mouth: 'smile',
   mouthColor: '#6B3A2E',
@@ -270,6 +273,27 @@ export function sanitizeAvatar (data) {
   if (!data || typeof data !== 'object') return out
   Object.keys(DEFAULT_AVATAR).forEach(key => {
     if (data[key] !== undefined && getOption(key, data[key])) out[key] = data[key]
+  })
+  return out
+}
+
+/** Grupos ocultos por la ropa elegida (p. ej. el overol oculta la parte superior). */
+export function hiddenKeys (state) {
+  const hidden = new Set()
+  Object.keys(GROUP_INDEX).forEach(key => {
+    const o = getOption(key, state[key])
+    if (o && o.hides) o.hides.forEach(h => hidden.add(h))
+  })
+  return hidden
+}
+
+/** Al elegir algo en un grupo oculto, la prenda que lo tapaba vuelve a la de por defecto
+    (elegir una camiseta con el overol puesto cambia el overol por el jean). */
+export function resolveHides (state, key) {
+  const out = { ...state }
+  Object.keys(GROUP_INDEX).forEach(k => {
+    const o = getOption(k, out[k])
+    if (k !== key && o && o.hides && o.hides.includes(key)) out[k] = DEFAULT_AVATAR[k]
   })
   return out
 }

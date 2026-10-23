@@ -1,4 +1,4 @@
-import { SITE, HOME_NAV, SECTIONS, FOOTER } from '../data/content.js'
+import { SITE, HOME_NAV, MINISO_NAV, SECTIONS, FOOTER } from '../data/content.js'
 import { icon } from '../utils/icons.js'
 import { goSection } from '../utils/router.js'
 import { sound } from '../utils/sound.js'
@@ -29,7 +29,7 @@ export function renderHeader (el) {
         <span class="sr-only">MINISO × Animal Crossing</span>
       </a>
       <nav class="hh-nav" aria-label="Principal">
-        ${HOME_NAV.map(n => `<a class="hh-link" href="${n.href}" data-href="${n.href}"${out(n.href)}>${n.label}</a>`).join('')}
+        ${HOME_NAV.map(n => `<a class="hh-link" href="#/" data-section="${n.section}">${n.label}</a>`).join('')}
       </nav>
       <div class="hh-end">
         <button type="button" class="icon-btn hh-sound" data-sound></button>
@@ -54,7 +54,7 @@ export function renderHeader (el) {
         </ul>
         <p class="drawer-label">MINISO</p>
         <ul class="drawer-list">
-          ${HOME_NAV.filter(n => n.href.startsWith('http')).map(n => `<li><a href="${n.href}"${out(n.href)}>${n.label}</a></li>`).join('')}
+          ${MINISO_NAV.map(n => `<li><a href="${n.href}"${out(n.href)}>${n.label}</a></li>`).join('')}
         </ul>
       </nav>
       <a class="btn btn--primary btn--block btn--cta" href="#/personalizar">¡Hacer mi avatar!</a>`
@@ -84,19 +84,34 @@ export function renderHeader (el) {
     if (e.target.closest('a')) closeDialog(drawer)
   })
 
-  /* Marca el enlace de la página actual */
-  const mark = () => {
-    const hash = location.hash || '#/'
-    el.querySelectorAll('.hh-link').forEach(a => {
-      const on = a.dataset.href === hash || (a.dataset.href === '#/' && hash === '#')
-      if (on) a.setAttribute('aria-current', 'page')
-      else a.removeAttribute('aria-current')
-    })
-  }
-  window.addEventListener('hashchange', mark)
-  mark()
+  /* Los enlaces del encabezado bajan a su sección del inicio (desde otra página, primero vuelven al inicio) */
+  el.querySelector('.hh-nav').addEventListener('click', e => {
+    const a = e.target.closest('[data-section]')
+    if (!a) return
+    e.preventDefault()
+    goSection(a.dataset.section)
+  })
 
-  const onScroll = () => el.classList.toggle('is-scrolled', window.scrollY > 8)
+  /* Marca la sección del inicio que se está viendo (fuera del inicio no se marca ninguna) */
+  const links = [...el.querySelectorAll('.hh-link')]
+  const mark = () => {
+    let current = null
+    if (document.body.dataset.route === 'home') {
+      const line = el.offsetHeight + 40
+      links.forEach(a => {
+        const sec = document.getElementById(a.dataset.section)
+        if (sec && sec.getBoundingClientRect().top <= line) current = a
+      })
+      current = current || links[0]
+    }
+    links.forEach(a => a === current ? a.setAttribute('aria-current', 'location') : a.removeAttribute('aria-current'))
+  }
+  window.addEventListener('hashchange', () => setTimeout(mark, 400))
+
+  const onScroll = () => {
+    el.classList.toggle('is-scrolled', window.scrollY > 8)
+    mark()
+  }
   window.addEventListener('scroll', onScroll, { passive: true })
   onScroll()
 }

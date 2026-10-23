@@ -3,13 +3,13 @@ import gsap from 'gsap'
 import { computeDims, fitToModel } from './avatarDims.js'
 import { createMaterialKit, KEY_TO_ROLE, roleColor } from './materials.js'
 import { createPart, disposeObject } from './PartLoader.js'
-import { getOption, BASE_MODELS } from '../data/avatarOptions.js'
+import { getOption, hiddenKeys, BASE_MODELS } from '../data/avatarOptions.js'
 
 /* ==========================================================================
    AVATAR MODULAR
    El avatar es un conjunto de "slots". Cada slot contiene UNA pieza.
-   Cambiar una opción reemplaza solo la pieza de su slot; la posición,
-   escala, orientación y cámara se conservan.
+   Cambiar una opción reemplaza solo la pieza de su slot, al instante (como en el
+   juego); la posición, escala, orientación y cámara se conservan.
 
    parent 'head' → la pieza vive dentro de la cabeza (origen = centro de la cabeza)
    parent 'face' → igual que 'head', pero se escala para encajar en la cabeza
@@ -57,7 +57,7 @@ export class Avatar {
   async build (config) {
     this.config = { ...config }
     this._updateDims()
-    await Promise.all(SLOTS.map(s => this._setSlot(s, false)))
+    await Promise.all(SLOTS.map(s => this._setSlot(s)))
     return this
   }
 
@@ -81,7 +81,7 @@ export class Avatar {
         this._tweenRole(role, next[key])
         changed.push(key)
       } else if (SLOT_BY_KEY[key]) {
-        jobs.push(this._setSlot(SLOT_BY_KEY[key], this.animated))
+        jobs.push(this._setSlot(SLOT_BY_KEY[key]))
         changed.push(SLOT_BY_KEY[key].slot)
       }
     })
@@ -93,7 +93,7 @@ export class Avatar {
     const s = this.bodyGroup.scale
     if (this.animated) await gsap.to(s, { x: 1.08, y: 0.9, z: 1.08, duration: 0.16, ease: 'power2.in' })
     this._updateDims()
-    await Promise.all(SLOTS.map(slot => this._setSlot(slot, false)))
+    await Promise.all(SLOTS.map(slot => this._setSlot(slot)))
     if (this.animated) gsap.to(s, { x: 1, y: 1, z: 1, duration: 0.7, ease: 'elastic.out(1, 0.55)' })
   }
 
@@ -104,7 +104,7 @@ export class Avatar {
     this.faceGroup.scale.fromArray(this.dims.headFit || [1, 1, 1])
   }
 
-  async _setSlot (def, animate) {
+  async _setSlot (def) {
     const token = (this.tokens[def.slot] || 0) + 1
     this.tokens[def.slot] = token
 
@@ -119,7 +119,6 @@ export class Avatar {
     if (this.tokens[def.slot] !== token) { disposeObject(obj); return }
 
     obj.name = def.slot
-    if (option.scale) obj.scale.fromArray(option.scale)
     obj.traverse(o => { if (o.isMesh) o.castShadow = true })
     const parent = { head: this.headGroup, face: this.faceGroup }[def.parent] || this.bodyGroup
     const old = this.parts[def.slot]
@@ -128,31 +127,14 @@ export class Avatar {
     this._applyHides()
 
     if (old) {
-      if (animate) {
-        gsap.killTweensOf(old.scale)
-        gsap.to(old.scale, {
-          x: 0.001, y: 0.001, z: 0.001, duration: 0.22, ease: 'power2.in',
-          onComplete: () => { old.removeFromParent(); disposeObject(old) }
-        })
-      } else {
-        old.removeFromParent()
-        disposeObject(old)
-      }
-    }
-    if (animate) {
-      const target = obj.scale.clone()
-      obj.scale.setScalar(0.001)
-      gsap.to(obj.scale, { x: target.x, y: target.y, z: target.z, duration: 0.55, delay: 0.12, ease: 'back.out(1.7)' })
+      old.removeFromParent()
+      disposeObject(old)
     }
   }
 
   /** Oculta los slots que tapa la ropa elegida (p. ej. el vestido oculta el pantalón). */
   _applyHides () {
-    const hidden = new Set()
-    SLOTS.forEach(s => {
-      const o = s.key && getOption(s.key, this.config[s.key])
-      if (o && o.hides) o.hides.forEach(h => hidden.add(h))
-    })
+    const hidden = hiddenKeys(this.config)
     Object.entries(this.parts).forEach(([slot, obj]) => { obj.visible = !hidden.has(slot) })
   }
 
@@ -167,15 +149,6 @@ export class Avatar {
         else m.color.copy(c)
       })
     })
-  }
-
-  /** Centro en coordenadas de mundo de una pieza (para efectos visuales). */
-  getSlotCenter (slot) {
-    const obj = this.parts[slot]
-    const box = new THREE.Box3()
-    if (obj) box.setFromObject(obj)
-    if (!obj || box.isEmpty()) return new THREE.Vector3(0, this.dims ? this.dims.headY : 1, 0.3)
-    return box.getCenter(new THREE.Vector3())
   }
 
   /** Animación de reposo: respiración, balanceo y parpadeo. */

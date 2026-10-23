@@ -93,7 +93,7 @@ function template () {
       <div class="ready" id="ready" hidden>
         <h2 class="ready-title">¡Tu tarjeta está lista!</h2>
         <div class="final-actions">
-          <button type="button" class="choice-card" data-share><strong>Compartir</strong><span>Descárgala o compártela</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
+          <button type="button" class="choice-card is-nudging" data-share><strong>Compartir</strong><span>Descárgala o compártela</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
           <button type="button" class="choice-card" data-finish><strong>Finalizar</strong><span>Volver al inicio</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
         </div>
       </div>
@@ -259,7 +259,11 @@ function onClick (e) {
     sound.play('soft')
     return
   }
-  if (e.target.closest('[data-share]')) return openShare()
+  const share = e.target.closest('[data-share]')
+  if (share) {
+    share.classList.remove('is-nudging') // la sacudida solo invita al primer clic
+    return openShare()
+  }
   if (e.target.closest('[data-finish]')) { go('/'); toast('¡Gracias por crear con nosotros!', { iconName: 'leaf' }) }
 }
 function onKeys (e) {

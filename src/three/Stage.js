@@ -51,7 +51,6 @@ export class Stage {
     this.scene.add(this.environment.group)
     this.avatar = new Avatar({ animated: true })
     this.scene.add(this.avatar.root)
-    this._sparkles()
 
     this.clock = new THREE.Clock()
     this.container = null
@@ -85,36 +84,6 @@ export class Stage {
     const fill = new THREE.DirectionalLight(L.fill, L.fillIntensity)
     fill.position.set(-4, 3, -2)
     this.scene.add(fill)
-  }
-
-  _sparkles () {
-    this.sparkleGroup = new THREE.Group()
-    const geo = new THREE.OctahedronGeometry(0.035, 0)
-    const colors = ['#FFE08A', '#FFFFFF', '#F7B7C4', '#BFE3B0', '#E60012']
-    this.sparkles = []
-    for (let i = 0; i < 14; i++) {
-      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true, opacity: 0 }))
-      m.visible = false
-      this.sparkles.push(m)
-      this.sparkleGroup.add(m)
-    }
-    this.scene.add(this.sparkleGroup)
-  }
-
-  /** Pequeña explosión de destellos donde cambió una pieza (feedback visual). */
-  sparkleAt (slot) {
-    const center = this.avatar.getSlotCenter(slot)
-    this.sparkles.forEach((m, i) => {
-      gsap.killTweensOf([m.position, m.scale, m.material])
-      const dir = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.8 - 0.2, Math.random() * 0.6).normalize()
-      m.visible = true
-      m.position.copy(center)
-      m.scale.setScalar(0.6 + Math.random() * 0.8)
-      m.material.opacity = 1
-      gsap.to(m.position, { x: center.x + dir.x * 0.45, y: center.y + dir.y * 0.45, z: center.z + dir.z * 0.45, duration: 0.7, ease: 'power2.out' })
-      gsap.to(m.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 0.7, ease: 'power1.in' })
-      gsap.to(m.material, { opacity: 0, duration: 0.7, delay: 0.1, onComplete: () => { m.visible = false } })
-    })
   }
 
   /* ---------- Montaje en la página ---------- */

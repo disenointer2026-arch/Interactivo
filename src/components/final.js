@@ -1,5 +1,5 @@
 import gsap from 'gsap'
-import { getOptionName, getGroup } from '../data/avatarOptions.js'
+import { getOptionName, getGroup, hiddenKeys } from '../data/avatarOptions.js'
 import { icon, leafDeco } from '../utils/icons.js'
 import { esc, $, $$, REDUCED_MOTION } from '../utils/format.js'
 import { store } from '../utils/store.js'
@@ -13,17 +13,18 @@ import { getStage } from '../three/Stage.js'
 
 let stage = null
 
-/** Resumen legible de las decisiones (se omiten colores y opciones "Nada"). */
+/** Resumen legible de las decisiones (se omiten colores, opciones "Nada" y la ropa tapada). */
 export function summaryItems (state) {
+  const hidden = hiddenKeys(state)
   const rows = [
     ['Cabello', getOptionName('hair', state.hair)],
     ['Ojos', getOptionName('eyes', state.eyes)],
     ['Nariz', getOptionName('nose', state.nose)],
     ['Boca', getOptionName('mouth', state.mouth)],
-    ['Parte superior', getOptionName('shirt', state.shirt)],
-    ['Parte inferior', getOptionName('pants', state.pants)],
+    !hidden.has('shirt') && ['Parte superior', getOptionName('shirt', state.shirt)],
+    !hidden.has('pants') && ['Parte inferior', getOptionName('pants', state.pants)],
     ['Zapatos', getOptionName('shoes', state.shoes)]
-  ]
+  ].filter(Boolean)
   rows.push(['Llavero', state.companion === 'none' ? 'Ninguno' : getOptionName('companion', state.companion)])
   return rows
 }

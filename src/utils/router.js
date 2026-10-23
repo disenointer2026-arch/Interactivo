@@ -23,11 +23,24 @@ export function goSection (id) {
   else { pendingSection = id; go('/') }
 }
 
-function scrollToSection (id) {
+function scrollToSection (id, retries = 2) {
   const el = document.getElementById(id)
   if (!el) return
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  if (!retries) return
+  // Las imágenes que se cargan por el camino alargan la página y el desplazamiento se queda
+  // corto: al terminar, si la sección no llegó arriba, se vuelve a intentar
+  let done = false
+  const check = () => {
+    if (done) return
+    done = true
+    const pad = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
+    const atEdge = window.scrollY <= 0 || window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
+    if (!atEdge && Math.abs(el.getBoundingClientRect().top - pad) > 6) scrollToSection(id, retries - 1)
+  }
+  window.addEventListener('scrollend', check, { once: true })
+  setTimeout(check, 1500) // navegadores sin "scrollend"
 }
 
 function parse () {

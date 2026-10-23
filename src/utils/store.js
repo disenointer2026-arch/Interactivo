@@ -1,4 +1,4 @@
-import { DEFAULT_AVATAR, sanitizeAvatar } from '../data/avatarOptions.js'
+import { DEFAULT_AVATAR, sanitizeAvatar, resolveHides } from '../data/avatarOptions.js'
 import { storage } from './storage.js'
 
 /* ==========================================================================
@@ -51,9 +51,11 @@ class Store {
   }
 
   set (key, value) {
-    if (this.state[key] === value) return false
+    // Elegir la prenda ya guardada pero tapada (camiseta con overol) también cuenta como cambio
+    const next = resolveHides({ ...this.state, [key]: value }, key)
+    if (Object.keys(next).every(k => next[k] === this.state[k])) return false
     this._push()
-    this.state = { ...this.state, [key]: value }
+    this.state = next
     this._emit({ type: 'set', key })
     return true
   }

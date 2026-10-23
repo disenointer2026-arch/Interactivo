@@ -68,7 +68,7 @@ function template () {
   return `
   <h1 class="sr-only">MINISO × Animal Crossing — ${esc(b.title)}</h1>
 
-  <section class="banner" aria-label="${esc(b.title)}">
+  <section id="inicio" class="banner" aria-label="${esc(b.title)}">
     <img class="banner-img" src="${b.src}" alt="${esc(b.alt)}" fetchpriority="high" decoding="async" />
   </section>
 
@@ -100,7 +100,7 @@ function template () {
     </div>
   </section>
 
-  <section class="photo-band" aria-labelledby="photo-title" aria-roledescription="carrusel">
+  <section id="coleccion" class="photo-band" aria-labelledby="photo-title" aria-roledescription="carrusel">
     ${l.slides.map((s, i) => `
       <img class="pb-slide${i === 0 ? ' is-on' : ''}" src="${s.src}" alt="${esc(s.alt)}" ${i === 0 ? '' : 'loading="lazy"'} decoding="async" />`).join('')}
     <div class="photo-band-copy">

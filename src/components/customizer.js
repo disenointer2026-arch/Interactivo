@@ -1,5 +1,5 @@
 import gsap from 'gsap'
-import { CATEGORIES, randomAvatar } from '../data/avatarOptions.js'
+import { CATEGORIES, randomAvatar, hiddenKeys } from '../data/avatarOptions.js'
 import { icon } from '../utils/icons.js'
 import { esc, cssUrl, $, $$ } from '../utils/format.js'
 import { store } from '../utils/store.js'
@@ -47,24 +47,24 @@ function template () {
       <div class="studio-top">
         <a class="chip-btn" href="#/">${icon('arrowLeft')}<span>Inicio</span></a>
         <div class="toolbar" role="toolbar" aria-label="Historial">
-          <button type="button" class="tool" data-act="undo" aria-label="Deshacer" title="Deshacer (Ctrl+Z)">${icon('undo')}</button>
-          <button type="button" class="tool" data-act="redo" aria-label="Rehacer" title="Rehacer (Ctrl+Y)">${icon('redo')}</button>
+          <button type="button" class="tool" data-act="undo" aria-label="Deshacer" data-tip="Deshacer">${icon('undo')}</button>
+          <button type="button" class="tool" data-act="redo" aria-label="Rehacer" data-tip="Rehacer">${icon('redo')}</button>
           <span class="toolbar-sep" aria-hidden="true"></span>
-          <button type="button" class="tool" data-act="random" aria-label="Sorpréndeme: avatar aleatorio" title="Sorpréndeme">${icon('dice')}</button>
-          <button type="button" class="tool" data-act="reset" aria-label="Reiniciar avatar" title="Reiniciar avatar">${icon('reset')}</button>
+          <button type="button" class="tool" data-act="random" aria-label="Sorpréndeme: avatar aleatorio" data-tip="Sorpréndeme">${icon('dice')}</button>
+          <button type="button" class="tool" data-act="reset" aria-label="Reiniciar avatar" data-tip="Reiniciar avatar">${icon('reset')}</button>
         </div>
         <div class="studio-top-right">
-          <button type="button" class="tool tool--round" data-act="sound" aria-pressed="${sound.enabled}" aria-label="Sonidos">${icon(sound.enabled ? 'sound' : 'soundOff')}</button>
-          <button type="button" class="tool tool--round" data-act="help" aria-label="¿Cómo funciona?">${icon('help')}</button>
+          <button type="button" class="tool tool--round" data-act="sound" aria-pressed="${sound.enabled}" aria-label="Sonidos" data-tip="Sonido">${icon(sound.enabled ? 'sound' : 'soundOff')}</button>
+          <button type="button" class="tool tool--round" data-act="help" aria-label="¿Cómo funciona?" data-tip="¿Cómo funciona?">${icon('help')}</button>
         </div>
       </div>
 
       <div class="camera-bar toolbar" role="toolbar" aria-label="Cámara">
-        <button type="button" class="tool" data-act="front" aria-label="Vista frontal" title="Vista frontal">${icon('front')}<span class="tool-label">Frente</span></button>
-        <button type="button" class="tool" data-act="spin" aria-pressed="false" aria-label="Vista 360°, girar automáticamente" title="Vista 360°">${icon('rotate')}<span class="tool-label">360°</span></button>
+        <button type="button" class="tool" data-act="front" aria-label="Vista frontal" data-tip="Vista frontal">${icon('front')}<span class="tool-label">Frente</span></button>
+        <button type="button" class="tool" data-act="spin" aria-pressed="false" aria-label="Vista 360°, girar automáticamente" data-tip="Girar 360°">${icon('rotate')}<span class="tool-label">360°</span></button>
         <span class="toolbar-sep" aria-hidden="true"></span>
-        <button type="button" class="tool" data-act="zoomOut" aria-label="Alejar">${icon('zoomOut')}</button>
-        <button type="button" class="tool" data-act="zoomIn" aria-label="Acercar">${icon('zoomIn')}</button>
+        <button type="button" class="tool" data-act="zoomOut" aria-label="Alejar" data-tip="Alejar">${icon('zoomOut')}</button>
+        <button type="button" class="tool" data-act="zoomIn" aria-label="Acercar" data-tip="Acercar">${icon('zoomIn')}</button>
       </div>
       <p class="stage-hint">Arrastra para ver desde el ángulo que quieras</p>
       <span class="save-leaf" aria-hidden="true" title="Cambios guardados en este navegador"></span>
@@ -75,7 +75,7 @@ function template () {
       <div class="cat-tabs" role="tablist" aria-label="Categorías">${tabsHTML()}</div>
       <div class="cat-panel" id="catPanel" role="tabpanel" tabindex="0"></div>
       <div class="panel-actions">
-        ${mainButton('done', 'Confirmar')}
+        ${mainButton('done', 'Finalizar avatar')}
       </div>
     </aside>
   </section>`
@@ -129,7 +129,7 @@ function groupHTML (g, i, groups) {
     return `
       <fieldset class="opt-group opt-group--images">
         ${legend}
-        <div class="img-opts" role="radiogroup" aria-label="${esc(g.label)}">
+        <div class="img-opts${g.columns === 4 ? ' img-opts--4' : ''}" role="radiogroup" aria-label="${esc(g.label)}">
           ${g.options.map(o => `
             <button type="button" class="img-opt" role="radio" data-key="${g.key}" data-id="${o.id}"
               aria-checked="${o.id === value}" tabindex="${o.id === value ? 0 : -1}"
@@ -168,10 +168,16 @@ function renderPanel (animate = true) {
 
 /** Actualiza solo los estados seleccionados (sin redibujar el panel). */
 function syncSelection () {
+  // Un grupo tapado por otra prenda (la parte superior con el overol) se ve sin selección
+  const hidden = hiddenKeys(store.state)
   $$('[role="radio"][data-key]', root).forEach(b => {
-    const on = store.state[b.dataset.key] === b.dataset.id
+    const on = store.state[b.dataset.key] === b.dataset.id && !hidden.has(b.dataset.key)
     b.setAttribute('aria-checked', on)
     b.tabIndex = on ? 0 : -1
+  })
+  hidden.forEach(key => {
+    const first = $(`[role="radio"][data-key="${key}"]`, root)
+    if (first) first.tabIndex = 0
   })
   const undo = $('[data-act="undo"]', root)
   const redo = $('[data-act="redo"]', root)
@@ -298,12 +304,7 @@ async function onStoreChange (state, meta) {
   syncSelection()
   flashSaveLeaf()
   if (!stage) return
-  const changed = await stage.avatar.apply(state)
-  if (meta.type === 'set' && changed.length) {
-    const slot = changed[0]
-    const slotName = SLOT_BY_KEY[meta.key] ? SLOT_BY_KEY[meta.key].slot : slot
-    stage.sparkleAt(slotName === 'body' ? 'shirt' : slotName)
-  }
+  await stage.avatar.apply(state)
   if (meta.type === 'reset' || meta.type === 'random' || meta.type === 'undo' || meta.type === 'redo') {
     renderPanelThumbsOnly()
   }

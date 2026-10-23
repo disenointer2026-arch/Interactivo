@@ -21,8 +21,17 @@ export const MINISO_LINKS = {
 
 /* Navegación del encabezado (todas las pantallas). Todo lo que empieza por http sale a
    miniso.com y se abre en una pestaña nueva. */
+/* Encabezado: cada enlace baja a una sección del inicio (id de la sección) */
 export const HOME_NAV = [
-  { label: 'Inicio', href: '#/' },
+  { label: 'Inicio', section: 'inicio' },
+  { label: 'Colaboración', section: 'colaboracion' },
+  { label: 'Colección', section: 'coleccion' },
+  { label: 'Cómo funciona', section: 'como-funciona' },
+  { label: 'Testimonios', section: 'testimonios' }
+]
+
+/* Enlaces a miniso.com (menú lateral) */
+export const MINISO_NAV = [
   { label: 'Marca', href: MINISO_LINKS.marca },
   { label: 'Productos', href: MINISO_LINKS.productos },
   { label: 'Tiendas', href: MINISO_LINKS.tiendas },
@@ -174,7 +183,7 @@ export const TESTIMONIALS = [
   {
     name: 'Andrés', place: 'Medellín',
     quote: 'Pensé que iba a tardar dos minutos y me quedé media hora probando peinados. La tarjeta la tengo de fondo de pantalla.',
-    avatar: { hair: 'spiky', hairColor: '#C05333', shirt: 'chaqueta', shirtColor: '#3A4A5A', accHead: 'headphones', skin: '#C6815D', eyes: 'big', eyeColor: '#9C7657' }
+    avatar: { hair: 'spiky', hairColor: '#C05333', shirt: 'chaqueta', shirtColor: '#3A4A5A', accHead: 'headphones', skin: '#C6815D', eyes: 'lashes', eyeColor: '#9C7657' }
   },
   {
     name: 'Mariana', place: 'Bogotá',
@@ -189,7 +198,7 @@ export const TESTIMONIALS = [
   {
     name: 'Lucía', place: 'Pereira',
     quote: 'Nada de plantillas: cada decisión la tomé yo. Por eso se siente mío.',
-    avatar: { hair: 'buns', hairColor: '#F89FAD', shirt: 'camisa-2', shirtColor: '#7FB3D5', skin: '#FFCCAB', accFace: 'blush', eyes: 'almond', eyeColor: '#9B97A2' }
+    avatar: { hair: 'buns', hairColor: '#F89FAD', shirt: 'camisa-2', shirtColor: '#7FB3D5', skin: '#FFCCAB', accFace: 'blush', eyes: 'lashesTop', eyeColor: '#9B97A2' }
   },
   {
     name: 'Tomás', place: 'Cartagena',
