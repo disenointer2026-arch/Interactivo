@@ -147,27 +147,13 @@ export const PEEK = [
 export const FOOTER = {
   inquiriesLabel: 'Consultas de franquicia',
   email: 'Franchise@miniso.com',
+  // Todos los enlaces del pie llevan al inicio de la página principal (ver renderFooter)
   columns: [
-    {
-      title: 'Marca',
-      href: MINISO_LINKS.marca,
-      links: [{ label: 'Perfil de marca', href: MINISO_LINKS.marca }]
-    },
-    {
-      title: 'Productos',
-      href: MINISO_LINKS.productos,
-      links: [
-        { label: 'Colaboración IP', href: MINISO_LINKS.productos },
-        { label: '¡Hacer mi avatar!', href: '#/personalizar' }
-      ]
-    },
-    {
-      title: 'Tiendas',
-      href: MINISO_LINKS.tiendas,
-      links: [{ label: 'Nuestras tiendas', href: MINISO_LINKS.tiendas }]
-    },
-    { title: 'Inversores', href: MINISO_LINKS.inversores, links: [] },
-    { title: 'Responsabilidad social', href: MINISO_LINKS.social, links: [] }
+    { title: 'Marca', links: ['Perfil de marca'] },
+    { title: 'Productos', links: ['Colaboración IP', '¡Hacer mi avatar!'] },
+    { title: 'Tiendas', links: ['Nuestras tiendas'] },
+    { title: 'Inversores', links: [] },
+    { title: 'Responsabilidad social', links: [] }
   ],
   copyright: 'Copyright © 2026 · MINISO × Animal Crossing (colaboración ficticia)'
 }
@@ -178,32 +164,32 @@ export const TESTIMONIALS = [
   {
     name: 'Valentina', place: 'Cali',
     quote: 'Le puse mis gafas redondas y mi bufanda roja. Cuando llegó la figura, mi mamá dijo que era yo en miniatura.',
-    avatar: { hair: 'bob', hairColor: '#3F3B33', accFace: 'roundglasses', accNeck: 'scarf', shirt: 'camisa', shirtColor: '#F6F1E6', skin: '#FFAF7D', mouth: 'open', mouthColor: '#E0706A' }
+    avatar: { hair: 'ondas', hairColor: '#3F3B33', accHead: 'gafas-redondas', shirt: 'camisa', shirtColor: '#F6F1E6', skin: '#FFAF7D', mouth: 'teeth' }
   },
   {
     name: 'Andrés', place: 'Medellín',
     quote: 'Pensé que iba a tardar dos minutos y me quedé media hora probando peinados. La tarjeta la tengo de fondo de pantalla.',
-    avatar: { hair: 'spiky', hairColor: '#C05333', shirt: 'chaqueta', shirtColor: '#3A4A5A', accHead: 'headphones', skin: '#C6815D', eyes: 'lashes', eyeColor: '#9C7657' }
+    avatar: { hair: 'picos', hairColor: '#C05333', shirt: 'chaqueta', shirtColor: '#3A4A5A', accHead: 'audifonos', skin: '#C6815D', eyes: 'lashes', eyeColor: '#9C7657' }
   },
   {
     name: 'Mariana', place: 'Bogotá',
     quote: 'Me encantó poder poner a mi gata. Es el regalo de cumpleaños más personal que le he dado a mi hermana.',
-    avatar: { hair: 'long', hairColor: '#D2CA7F', shirt: 'vestido', shirtColor: '#F2A7B8', companion: 'cat', skin: '#FFDCC6', eyes: 'happy', accHead: 'flower' }
+    avatar: { hair: 'largo', hairColor: '#D2CA7F', shirt: 'vestido', shirtColor: '#F2A7B8', companion: 'tulipan', skin: '#FFDCC6', eyes: 'happy', accHead: 'flor' }
   },
   {
     name: 'Samuel', place: 'Barranquilla',
     quote: 'Recogí mi pedido en la tienda y ya venía en una cajita con ventana. Se siente como un coleccionable de verdad.',
-    avatar: { hair: 'curly', hairColor: '#3F3B33', shirt: 'chaqueta-2', shirtColor: '#F6D365', skin: '#AF735C', accHead: 'strawhat', companion: 'shopbag' }
+    avatar: { hair: 'afro', hairColor: '#3F3B33', shirt: 'chaqueta-2', shirtColor: '#F6D365', skin: '#AF735C', accHead: 'sombrero', companion: 'regalo' }
   },
   {
     name: 'Lucía', place: 'Pereira',
     quote: 'Nada de plantillas: cada decisión la tomé yo. Por eso se siente mío.',
-    avatar: { hair: 'buns', hairColor: '#F89FAD', shirt: 'camisa-2', shirtColor: '#7FB3D5', skin: '#FFCCAB', accFace: 'blush', eyes: 'lashesTop', eyeColor: '#9B97A2' }
+    avatar: { hair: 'colitas', hairColor: '#F89FAD', shirt: 'camisa-2', shirtColor: '#7FB3D5', skin: '#FFCCAB', eyes: 'lashesTop', eyeColor: '#9B97A2' }
   },
   {
     name: 'Tomás', place: 'Cartagena',
     quote: 'Hice uno para mí y otro para mi abuelo, con su sombrero y su perro. Los dos están en su repisa.',
-    avatar: { hair: 'none', shirt: 'manga-larga', shirtColor: '#F6F1E6', skin: '#AF735C', accHead: 'cap', companion: 'dog', accFace: 'roundglasses' }
+    avatar: { hair: 'none', shirt: 'manga-larga', shirtColor: '#F6F1E6', skin: '#AF735C', accHead: 'gorra', companion: 'guitarra' }
   }
 ]
 
@@ -228,11 +214,13 @@ export const BANKS = ['Bancolombia', 'Banco de Bogotá', 'Davivienda', 'BBVA', '
 /* Tarjeta coleccionable */
 export const CARD = {
   months: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+  /* Plantillas SVG de static/images/tarjetas. from/to = muestra del selector (fondo y
+     franja inferior); accent = color del número, el mismo de la plantilla */
   themes: [
-    { id: 'spring', name: 'Primavera', from: '#DDF0D2', to: '#FFF4D6', leaf: '#7DB46C' },
-    { id: 'beach', name: 'Playa', from: '#CFEAF2', to: '#FFF1D2', leaf: '#5FA3B8' },
-    { id: 'autumn', name: 'Otoño', from: '#F8DDC0', to: '#FFF3DD', leaf: '#D08A43' },
-    { id: 'night', name: 'Noche', from: '#C9CBEA', to: '#F3E9F7', leaf: '#7D7AB8' }
-  ],
-  series: 'Serie Isla 01'
+    { id: 'hoja', name: 'Hoja', svg: 'images/tarjetas/hoja.svg', from: '#A9B15E', to: '#1B3204', accent: '#6A7E37' },
+    { id: 'cereza', name: 'Cereza', svg: 'images/tarjetas/cereza.svg', from: '#EF92AE', to: '#AB214F', accent: '#E62F82' },
+    { id: 'oceano', name: 'Océano', svg: 'images/tarjetas/oceano.svg', from: '#AEDEF4', to: '#0969A5', accent: '#04BCE0' },
+    { id: 'sol', name: 'Sol', svg: 'images/tarjetas/sol.svg', from: '#FAC900', to: '#D8590C', accent: '#F08C00' },
+    { id: 'fosil', name: 'Fósil', svg: 'images/tarjetas/fosil.svg', from: '#DDAA7F', to: '#582B25', accent: '#9F7976' }
+  ]
 }

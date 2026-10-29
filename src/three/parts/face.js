@@ -1,36 +1,18 @@
 import * as THREE from 'three'
-import { mesh, group, placeOnHead } from './helpers.js'
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js'
+import { mesh, group, placeOnHead, onHead } from './helpers.js'
+import { headGeometry } from '../PartLoader.js'
 
 /* Rasgos faciales: origen en el centro de la cabeza.
    placeOnHead() pega cada rasgo sobre la superficie y lo orienta hacia afuera. */
 
-const EYE_X = 0.17
-const EYE_Y = 0.0
-const LINE = '#563028' // café oscuro del contorno en los botones de ojos
-const TAU = Math.PI * 2
-
-function pairOfEyes (ctx, buildOne) {
-  const g = group()
-  ;[-1, 1].forEach(s => {
-    const eye = buildOne(ctx, s)
-    eye.userData.eye = true // se usa para el parpadeo
-    // Los ojos son calcomanías planas (como en el juego); se separan un poco de la cara
-    // para que los bordes no se hundan en la curva de la cabeza
-    const holder = placeOnHead(group(eye), ctx.dims, s * EYE_X, EYE_Y, 0.008)
-    g.add(holder)
-  })
-  return g
-}
-
-/* ---------- Piezas planas de los ojos (z = capa, para que no se mezclen) ---------- */
-
-/* Los ojos son dibujos planos: material sin luz, para que se vean con los colores
-   exactos de los botones (con luz, el blanco y el iris se deslavaban) */
+/* Rasgos dibujados (ojos y boca): material sin luz, para que se vean con los colores
+   exactos del diseño (con luz, el blanco y el iris se deslavaban) */
 function flat (color) {
   return new THREE.MeshBasicMaterial({ color, toneMapped: false })
 }
 
-/** Igual, pero con el color de un rol (iris = color de ojos, párpado = piel). */
+/** Igual, pero con el color de un rol (iris = color de ojos, boca = color de boca). */
 function flatRole (M, role, shade = 1) {
   const lit = M.role(role, { shade })
   const m = flat(lit.color)
@@ -39,117 +21,65 @@ function flatRole (M, role, shade = 1) {
   return m
 }
 
-/** Óvalo relleno. */
-function oval (rx, ry, mat, z, cx = 0, cy = 0) {
-  return mesh(new THREE.CircleGeometry(1, 48), mat, { pos: [cx, cy, z], scale: [rx, ry, 1] })
-}
+/* ---------- Ojos ----------
+   Mapas UV del diseño (static/images/ojos, preparados con tools/blender/prepare_eye_maps.py):
+   se pintan sobre la propia malla de la cabeza, en tres capas:
+   blanco + contorno → iris (con el color de ojos elegido) → contorno y párpado encima.
+   Las imágenes son solo la zona de los ojos del mapa UV; repeat/offset las ubican. */
+const EYE_CROP = { x: 0.616822, y: 0.735191, w: 0.224299, h: 0.131117 } // en el mapa UV (origen arriba)
+const texLoader = new THREE.TextureLoader()
+const texCache = new Map()
 
-/** Trazo curvo sobre un óvalo, del ángulo a0 al a1 (0 = derecha, PI/2 = arriba). */
-function arc (rx, ry, t, mat, z, a0, a1, cy = 0) {
-  const n = 40
-  const shape = new THREE.Shape()
-  for (let i = 0; i <= n; i++) {
-    const a = a0 + (a1 - a0) * i / n
-    const x = Math.cos(a) * (rx + t / 2)
-    const y = Math.sin(a) * (ry + t / 2)
-    if (i) shape.lineTo(x, y)
-    else shape.moveTo(x, y)
+function eyeTexture (url) {
+  if (!texCache.has(url)) {
+    texCache.set(url, texLoader.loadAsync(url).then(t => {
+      t.colorSpace = THREE.SRGBColorSpace
+      t.flipY = false // las UV del .glb tienen el origen arriba, como la imagen
+      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping
+      return t
+    }))
   }
-  for (let i = n; i >= 0; i--) {
-    const a = a0 + (a1 - a0) * i / n
-    shape.lineTo(Math.cos(a) * (rx - t / 2), Math.sin(a) * (ry - t / 2))
-  }
-  return mesh(new THREE.ShapeGeometry(shape), mat, { pos: [0, cy, z] })
+  return texCache.get(url)
 }
 
-/** Párpado: la parte del óvalo por encima (o por debajo) de la recta y = y0 + k·x. */
-function lid (rx, ry, mat, z, y0, k, above) {
-  const pts = []
-  for (let i = 0; i < 64; i++) pts.push(new THREE.Vector2(Math.cos(i / 64 * TAU) * rx, Math.sin(i / 64 * TAU) * ry))
-  const side = p => (p.y - (y0 + k * p.x)) * (above ? 1 : -1)
-  const out = []
-  pts.forEach((p, i) => {
-    const q = pts[(i + 1) % pts.length]
-    if (side(p) >= 0) out.push(p)
-    if ((side(p) >= 0) !== (side(q) >= 0)) out.push(p.clone().lerp(q, side(p) / (side(p) - side(q))))
-  })
-  return mesh(new THREE.ShapeGeometry(new THREE.Shape(out)), mat, { pos: [0, 0, z] })
-}
-
-/** Pestaña: trazo recto que sale del punto (x, y) en la dirección del ángulo a (0 = hacia arriba). */
-function lash (mat, x, y, a, len = 0.03, r = 0.0055) {
-  const dx = Math.sin(a)
-  const dy = Math.cos(a)
-  const d = len / 2 + r
-  return mesh(new THREE.CapsuleGeometry(r, len, 3, 8), mat, { pos: [x + dx * d, y + dy * d, 0.002], rot: [0, 0, -a], scale: [1, 1, 0.3] })
-}
-
-/** Ojo base: contorno (completo o solo arriba), blanco e iris (con el color elegido). */
-function baseEye (M, { rx, ry, t = 0.011, top = false }) {
-  const line = flat(LINE)
-  const g = group(
-    top ? arc(rx, ry, t * 1.2, line, 0.003, -0.15, Math.PI + 0.15) : oval(rx + t, ry + t, line, 0),
-    oval(rx, ry, flat('#FFFFFF'), 0.0015),
-    // El iris mira hacia la derecha, como en los botones
-    oval(rx * 0.62, ry * 0.68, flatRole(M, 'eye'), 0.0025, rx * 0.28, ry * 0.06)
-  )
-  g.userData = { line, rx, ry, t }
-  return g
-}
-
-/** Tres pestañas repartidas sobre el contorno, arriba (dir = 1) o abajo (dir = -1). */
-function lashes (g, dir) {
-  const { line, rx, ry, t } = g.userData
-  ;[-0.6, 0, 0.6].forEach(a => {
-    const th = dir * (Math.PI / 2 - a * 0.9)
-    const x = Math.cos(th) * (rx + t * 0.5)
-    const y = Math.sin(th) * (ry + t * 0.5)
-    g.add(lash(line, x, y, dir > 0 ? a : Math.PI - a))
+async function uvEyes (ctx, n) {
+  const { M } = ctx
+  const [geo, ...maps] = await Promise.all([
+    headGeometry(),
+    ...['base', 'iris', 'lineas'].map(k => eyeTexture(`images/ojos/${n}-${k}.png`))
+  ])
+  const g = group()
+  // Copia propia de cada textura: se libera junto con la pieza
+  const layers = maps.map(t => t.clone())
+  const mats = [flat('#FFFFFF'), flatRole(M, 'eye'), flat('#FFFFFF')]
+  layers.forEach((t, i) => {
+    t.repeat.set(1 / EYE_CROP.w, 1 / EYE_CROP.h)
+    t.offset.set(-EYE_CROP.x / EYE_CROP.w, -EYE_CROP.y / EYE_CROP.h)
+    Object.assign(mats[i], {
+      map: t, transparent: true, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -1 - i, polygonOffsetUnits: -4 - i
+    })
+    const m = new THREE.Mesh(geo, mats[i])
+    m.renderOrder = 1 + i
+    // La geometría es la de la cabeza: no se libera con la pieza, solo su material
+    m.userData.fromGLB = true
+    m.userData.ownMaterial = true
+    g.add(m)
   })
   return g
 }
 
 /* Los 8 estilos siguen los botones static/images/ui/botones-ojos-0N.png.
-   s = lado del ojo (-1 izquierda, 1 derecha, vistos de frente); "afuera" es hacia s. */
+   El 8 (Sonrientes) es el 7 (Soñolientos) volteado de arriba abajo. */
 export const eyeParts = {
-  // botones-ojos-01: contorno solo arriba y una pestaña curva hacia afuera
-  lashes: ctx => pairOfEyes(ctx, ({ M }, s) => {
-    const g = baseEye(M, { rx: 0.072, ry: 0.098, top: true })
-    g.add(lash(g.userData.line, s * 0.068, 0.07, s * 0.95, 0.026, 0.007))
-    return g
-  }),
-  // botones-ojos-02: óvalo con contorno completo
-  classic: ctx => pairOfEyes(ctx, ({ M }) => baseEye(M, { rx: 0.066, ry: 0.098 })),
-  // botones-ojos-03: más angosto, con tres pestañas arriba
-  lashesTop: ctx => pairOfEyes(ctx, ({ M }) => lashes(baseEye(M, { rx: 0.056, ry: 0.086 }), 1)),
-  // botones-ojos-04: párpado caído, más bajo hacia afuera
-  sleepy: ctx => pairOfEyes(ctx, ({ M }, s) => {
-    const rx = 0.066
-    const ry = 0.075
-    const g = baseEye(M, { rx, ry })
-    g.add(lid(rx + 0.012, ry + 0.012, flatRole(M, 'skin', 0.86), 0.0035, 0.1 * ry, -s * 0.3 * ry / rx, true))
-    return g
-  }),
-  // botones-ojos-08: como el 01, sin pestaña
-  soft: ctx => pairOfEyes(ctx, ({ M }) => baseEye(M, { rx: 0.072, ry: 0.098, top: true })),
-  // botones-ojos-07: redondo, con ceja
-  brow: ctx => pairOfEyes(ctx, ({ M }) => {
-    const rx = 0.062
-    const ry = 0.07
-    const g = baseEye(M, { rx, ry })
-    g.add(arc(rx * 1.05, ry * 0.9, 0.014, g.userData.line, 0.002, Math.PI * 0.22, Math.PI * 0.78, ry * 0.62))
-    return g
-  }),
-  // botones-ojos-06: más angosto, con tres pestañas abajo
-  lashesBottom: ctx => pairOfEyes(ctx, ({ M }) => lashes(baseEye(M, { rx: 0.056, ry: 0.086 }), -1)),
-  // botones-ojos-05: mejillas que suben (párpado inferior)
-  happy: ctx => pairOfEyes(ctx, ({ M }) => {
-    const rx = 0.066
-    const ry = 0.075
-    const g = baseEye(M, { rx, ry })
-    g.add(lid(rx + 0.012, ry + 0.012, flatRole(M, 'skin', 0.86), 0.0035, -0.04 * ry, 0, false))
-    return g
-  })
+  lashes: ctx => uvEyes(ctx, 1),
+  soft: ctx => uvEyes(ctx, 2),
+  classic: ctx => uvEyes(ctx, 3),
+  brow: ctx => uvEyes(ctx, 4),
+  lashesTop: ctx => uvEyes(ctx, 5),
+  lashesBottom: ctx => uvEyes(ctx, 6),
+  sleepy: ctx => uvEyes(ctx, 7),
+  happy: ctx => uvEyes(ctx, 8)
 }
 
 /* ---------- Nariz ---------- */
@@ -165,32 +95,76 @@ export const noseParts = {
   dot: ctx => nose(ctx, ({ M }) => mesh(new THREE.SphereGeometry(0.025, 12, 10), M.role('skin', { shade: 0.72 }), { scale: [1.2, 0.9, 0.7] }))
 }
 
-/* ---------- Boca ---------- */
+/* ---------- Boca ----------
+   Las bocas son los dibujos SVG del diseño (static/images/bocas), convertidos en
+   calcomanías planas sobre la cara, como los ojos. El café toma el color de boca y
+   el blanco (el diente) queda fijo. */
 const MOUTH_Y = -0.21
-function mouth (ctx, build) {
-  return placeOnHead(group(build(ctx)), ctx.dims, 0, MOUTH_Y, 0.006)
+const MOUTH_SCALE = 0.00033 // unidades de la cabeza por pixel del SVG (sonrisa de ~0,27 de ancho, como en el juego)
+const svgLoader = new SVGLoader()
+const svgCache = new Map()
+
+function loadSvg (url) {
+  if (!svgCache.has(url)) svgCache.set(url, fetch(url).then(r => r.text()).then(t => svgLoader.parse(t)))
+  return svgCache.get(url)
+}
+
+/** Parte los triángulos hasta que ningún lado mida más de maxLen. Así, al pegar el
+    dibujo sobre la cara curva, ningún triángulo largo la atraviesa por dentro. */
+function subdivide (geo, maxLen) {
+  const src = geo.index ? geo.toNonIndexed() : geo
+  const p = src.attributes.position
+  const stack = []
+  for (let i = 0; i < p.count; i += 3) {
+    stack.push([0, 1, 2].map(k => new THREE.Vector3().fromBufferAttribute(p, i + k)))
+  }
+  const out = []
+  while (stack.length) {
+    const t = stack.pop()
+    const edges = [[0, 1], [1, 2], [2, 0]].map(([a, b]) => [a, b, t[a].distanceTo(t[b])])
+    const [a, b, len] = edges.reduce((m, e) => (e[2] > m[2] ? e : m))
+    if (len <= maxLen) { out.push(...t); continue }
+    const c = 3 - a - b
+    const mid = t[a].clone().lerp(t[b], 0.5)
+    stack.push([t[a], mid, t[c]], [mid, t[b], t[c]])
+  }
+  return new THREE.BufferGeometry().setFromPoints(out)
+}
+
+async function svgMouth (ctx, url) {
+  const { M, dims } = ctx
+  const data = await loadSvg(url)
+  const parts = data.paths.map(path => {
+    const fill = new THREE.Color(path.userData.style.fill)
+    const geo = subdivide(new THREE.ShapeGeometry(SVGLoader.createShapes(path)), 30)
+    geo.computeBoundingBox()
+    return { geo, white: fill.r + fill.g + fill.b > 2.5 }
+  })
+  const box = new THREE.Box3()
+  parts.forEach(p => box.union(p.geo.boundingBox))
+  const c = box.getCenter(new THREE.Vector3())
+  const g = group()
+  parts.forEach(({ geo, white }, i) => {
+    // Cada punto del dibujo se pega sobre la cara (se curva con ella): centrado,
+    // escalado, con el eje y invertido (en SVG crece hacia abajo) y una capa por trazo
+    // en el orden del SVG (el diente va detrás del contorno)
+    const pos = geo.attributes.position
+    for (let v = 0; v < pos.count; v++) {
+      const x = (pos.getX(v) - c.x) * MOUTH_SCALE
+      const y = MOUTH_Y - (pos.getY(v) - c.y) * MOUTH_SCALE
+      pos.setXYZ(v, ...onHead(dims, x, y, 0.008 + i * 0.0015).p.toArray())
+    }
+    geo.computeBoundingBox() // la caja anterior era la del SVG sin escalar
+    geo.computeBoundingSphere()
+    const mat = white ? flat('#F8F7FC') : flatRole(M, 'mouth')
+    mat.side = THREE.DoubleSide // al invertir el eje y los triángulos quedan al revés
+    g.add(mesh(geo, mat))
+  })
+  return g
 }
 
 export const mouthParts = {
-  smile: ctx => mouth(ctx, ({ M }) => mesh(new THREE.TorusGeometry(0.06, 0.013, 8, 20, Math.PI), M.role('mouth'), { rot: [0, 0, Math.PI], pos: [0, 0.03, 0] })),
-  open: ctx => mouth(ctx, ({ M }) => group(
-    mesh(new THREE.CircleGeometry(0.068, 24, Math.PI, Math.PI), M.role('mouth', { side: THREE.DoubleSide }), { pos: [0, 0.03, 0] }),
-    mesh(new THREE.CircleGeometry(0.035, 16, Math.PI, Math.PI), M.fixed('#F08A8A', { side: THREE.DoubleSide }), { pos: [0, -0.01, 0.002] })
-  )),
-  neutral: ctx => mouth(ctx, ({ M }) => mesh(new THREE.CapsuleGeometry(0.012, 0.07, 4, 8), M.role('mouth'), { rot: [0, 0, Math.PI / 2] })),
-  /* Sonrisa con un diente asomando por debajo del centro */
-  teeth: ctx => mouth(ctx, ({ M }) => group(
-    mesh(new THREE.TorusGeometry(0.06, 0.013, 8, 20, Math.PI), M.role('mouth'), { rot: [0, 0, Math.PI], pos: [0, 0.03, 0] }),
-    mesh(new THREE.BoxGeometry(0.036, 0.03, 0.01), M.role('mouth'), { pos: [0, -0.042, -0.002] }),
-    mesh(new THREE.BoxGeometry(0.024, 0.02, 0.01), M.fixed('#F7F6FB'), { pos: [0, -0.04, 0.004] })
-  )),
-  cat: ctx => mouth(ctx, ({ M }) => {
-    const mat = M.role('mouth')
-    const arc = new THREE.TorusGeometry(0.032, 0.011, 8, 16, Math.PI)
-    return group(
-      mesh(arc, mat, { rot: [0, 0, Math.PI], pos: [-0.031, 0.015, 0] }),
-      mesh(arc, mat, { rot: [0, 0, Math.PI], pos: [0.031, 0.015, 0] })
-    )
-  }),
-  o: ctx => mouth(ctx, ({ M }) => mesh(new THREE.TorusGeometry(0.03, 0.012, 8, 18), M.role('mouth')))
+  smile: ctx => svgMouth(ctx, 'images/bocas/sonrisa.svg'),
+  cat: ctx => svgMouth(ctx, 'images/bocas/gato.svg'),
+  teeth: ctx => svgMouth(ctx, 'images/bocas/dientes.svg')
 }

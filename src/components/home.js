@@ -176,7 +176,7 @@ async function closingAvatar (root) {
   gsap.fromTo(el, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power2.out' })
 
   if (REDUCED_MOTION) return
-  const happy = await renderAvatar({ ...store.state, mouth: 'open', eyes: 'happy' }, { width: 420, height: 560, framing: 'full' })
+  const happy = await renderAvatar({ ...store.state, mouth: 'teeth', eyes: 'happy' }, { width: 420, height: 560, framing: 'full' })
   if (!happy || !root.isConnected) return
   greetTimer = setInterval(() => {
     if (!el.isConnected) return stopGreeting()

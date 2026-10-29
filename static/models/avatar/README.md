@@ -9,6 +9,16 @@ Exportados desde `Modelos.Interactivo` con `tools/blender/export_models.py`
 - `cabeza.glb`: cabeza y orejas. Origen en el centro de la cabeza.
 - `ropa/*.glb`: prendas, alineadas al cuerpo (origen en el suelo).
 
+Desde "Modelos restantes", con `tools/blender/export_extras.py`:
+
+    blender -b --disable-autoexec --python tools/blender/export_extras.py -- <carpeta del personaje> <carpeta de extras> static/models/avatar
+
+- `zapatos/*.glb`: origen en el suelo.
+- `cabello/*.glb`, `nariz/*.glb`, `accesorios/*.glb`: origen en el centro de la cabeza.
+  El cabello toma el color elegido (material `hair`) y la nariz el tono de piel (`skin_shade0.9`).
+- `llaveros/*.glb`: apoyados en el suelo y escalados; la página los pone detrás del
+  personaje (`KEYCHAIN_SPOT` en `src/data/avatarOptions.js`).
+
 El cuerpo y la cabeza se enlazan en `BASE_MODELS` y las prendas en el campo
 `model` de cada opción, ambos en `src/data/avatarOptions.js`.
 

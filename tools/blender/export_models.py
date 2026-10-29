@@ -13,12 +13,14 @@
 # 4. La rugosidad de los materiales sale de un ruido procedural (los destellos que dan
 #    el aspecto de plástico). glTF no admite nodos procedurales, así que se hornea en
 #    una imagen por objeto y se conecta a Roughness para que viaje en el .glb.
+#
+# Las funciones de este archivo también las usa export_extras.py (zapatos, peinados,
+# narices, accesorios y llaveros), por eso el proceso principal está en main().
 import bpy, sys, os, json
 from mathutils import Vector, Matrix
 
-args = sys.argv[sys.argv.index('--') + 1:]
-SRC, OUT = args[0], args[1]
-os.makedirs(os.path.join(OUT, 'ropa'), exist_ok=True)
+SRC = OUT = None  # carpetas de entrada y salida (las define main o export_extras.py)
+CHARACTER = 'AnimalCrossingCharacter - copia.blend'
 
 TARGET_HEAD_Y = 1.4465  # centro de la cabeza del avatar actual (avatarDims.js, cuerpo estándar)
 # Diferencia entre el cuerpo de AnimalCrossingCharacter y la copia del cuerpo del archivo Overol
@@ -26,6 +28,10 @@ OVEROL_TO_CHAR = Vector((0.0168 - 0.0392, -1.2267 - 0.0474, 0.0))
 
 def open_blend(name):
     bpy.ops.wm.open_mainfile(filepath=os.path.join(SRC, name), load_ui=False, use_scripts=False)
+    # Algunos archivos se guardaron en modo edición: así no se pueden transformar ni exportar
+    obj = bpy.context.view_layer.objects.active
+    if obj and obj.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
     relink_images()
 
 def relink_images():
@@ -52,6 +58,13 @@ def apply_matrix(objs, M):
     for o in objs:
         o.hide_set(False)
         o.hide_viewport = False
+        # Si el objeto o su colección no se pueden seleccionar, ni se transforma ni se exporta
+        o.hide_select = False
+        for c in o.users_collection:
+            c.hide_select = False
+        # Copias enlazadas (varios objetos con la misma malla): cada uno con la suya
+        if o.data and o.data.users > 1:
+            o.data = o.data.copy()
         o.matrix_world = M @ o.matrix_world
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
@@ -124,69 +137,92 @@ def rename_skin(objs):
             if slot.material and slot.material.name.lower().startswith(('piel', 'skin')):
                 slot.material.name = 'skin'
 
-# ---------------------------------------------------------------- Personaje
-open_blend('AnimalCrossingCharacter - copia.blend')
-ob = bpy.data.objects
-torso, brazos, piernas, cabeza, orejas = ob['torso'], ob['brazos'], ob['piernas'], ob['cabeza'], ob['orejas']
-mn, mx = world_bbox([torso, piernas])
-center_xy = Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, 0))
-ground = world_bbox([piernas])[0].z
-hmn, hmx = world_bbox([cabeza])
-head_c = (hmn + hmx) / 2
-scale = TARGET_HEAD_Y / (head_c.z - ground)
-# M: centra entre los pies, apoya en el suelo y escala
-M = Matrix.Scale(scale, 4) @ Matrix.Translation(Vector((-center_xy.x, -center_xy.y, -ground)))
-info = {'scale': scale, 'center_xy': list(center_xy[:2]), 'ground': ground}
+def character_frame():
+    """Abre el personaje y calcula M: centra entre los pies, apoya en el suelo y escala."""
+    open_blend(CHARACTER)
+    ob = bpy.data.objects
+    parts = [ob[n] for n in ('torso', 'brazos', 'piernas', 'cabeza', 'orejas')]
+    torso, brazos, piernas, cabeza, orejas = parts
+    mn, mx = world_bbox([torso, piernas])
+    center_xy = Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, 0))
+    ground = world_bbox([piernas])[0].z
+    hmn, hmx = world_bbox([cabeza])
+    head_c = (hmn + hmx) / 2
+    scale = TARGET_HEAD_Y / (head_c.z - ground)
+    M = Matrix.Scale(scale, 4) @ Matrix.Translation(Vector((-center_xy.x, -center_xy.y, -ground)))
+    return M, parts, {'scale': scale, 'center_xy': list(center_xy[:2]), 'ground': ground}
 
-apply_matrix([torso, brazos, piernas, cabeza, orejas], M)
-bake_roughness([torso, brazos, piernas, cabeza, orejas])
-rename_skin([torso, brazos, piernas, cabeza, orejas])
-export([torso, brazos, piernas], os.path.join(OUT, 'cuerpo.glb'))
 
-# Cabeza: origen en su centro
-hmn, hmx = world_bbox([cabeza])
-hc = (hmn + hmx) / 2
-half = (hmx - hmn) / 2
-apply_matrix([cabeza, orejas], Matrix.Translation(-hc))
-export([cabeza, orejas], os.path.join(OUT, 'cabeza.glb'))
-# Perfil para la página (convertido a ejes de la web: x, y=arriba, z=adelante)
-info['head_center_web'] = [round(hc.x, 4), round(hc.z, 4), round(-hc.y, 4)]
-info['head_half_web'] = [round(half.x, 4), round(half.z, 4), round(half.y, 4)]
-fmn, fmx = world_bbox([cabeza])
-info['head_front_web'] = round(-fmn.y, 4)
+def head_center(M):
+    """Centro de la cabeza ya transformada con M (el origen de las piezas de cabeza)."""
+    cabeza = bpy.data.objects['cabeza']
+    apply_matrix([cabeza], M)
+    hmn, hmx = world_bbox([cabeza])
+    return (hmn + hmx) / 2, (hmx - hmn) / 2
 
-# ---------------------------------------------------------------- Prendas
-# archivo, salida, familia ('char' ya alineada | 'overol' modelada sobre la copia del overol),
-# ubicación corregida para las copias desplazadas (la de su prenda gemela) y, opcional,
-# un ajuste fino ya en metros de la página (la chaqueta quedaba 2 cm a la izquierda)
-GARMENTS = [
-    ('camisa - copia.blend', 'camisa', 'overol', None),
-    ('Camisa.2 - copia.blend', 'camisa-2', 'overol', (0.0379, -0.2013, 1.4328)),
-    ('camisa.manga.larga - copia.blend', 'manga-larga', 'overol', None),
-    ('Chaqueta - copia.blend', 'chaqueta', 'overol', None, (0.0204, 0, 0)),
-    ('Chaqueta.2 - copia.blend', 'chaqueta-2', 'overol', (0.0379, -0.2013, 1.4328)),
-    ('vestido - copia.blend', 'vestido', 'overol', None),
-    ('Jean - copia.blend', 'jean', 'char', None),
-    ('Falda - copia.blend', 'falda', 'char', None),
-    ('Short - copia.blend', 'short', 'char', (0.0102, -1.7545, 1.0246)),
-    ('Overol - copia.blend', 'overol', 'overol', None),
-]
-info['garments'] = {}
-for fname, out, family, fix_loc, *nudge in GARMENTS:
-    open_blend(fname)
-    meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.visible_get()]
-    for o in meshes:
-        if fix_loc is not None:
-            o.location = fix_loc
-    bpy.context.view_layer.update()
-    delta = OVEROL_TO_CHAR if family == 'overol' else Vector((0, 0, 0))
-    apply_matrix(meshes, Matrix.Translation(Vector(nudge[0] if nudge else (0, 0, 0))) @ M @ Matrix.Translation(delta))
-    bake_roughness(meshes)
-    rename_skin(meshes)
-    export(meshes, os.path.join(OUT, 'ropa', out + '.glb'))
-    gmn, gmx = world_bbox(meshes)
-    info['garments'][out] = {'objects': [o.name for o in meshes], 'bbox_web_min': [round(gmn.x, 3), round(gmn.z, 3), round(-gmx.y, 3)], 'bbox_web_max': [round(gmx.x, 3), round(gmx.z, 3), round(-gmn.y, 3)]}
 
-with open(os.path.join(OUT, 'perfil-modelos.json'), 'w', encoding='utf-8') as f:
-    json.dump(info, f, indent=1)
-print('EXPORT_OK')
+def main():
+    global SRC, OUT
+    args = sys.argv[sys.argv.index('--') + 1:]
+    SRC, OUT = args[0], args[1]
+    os.makedirs(os.path.join(OUT, 'ropa'), exist_ok=True)
+
+    # ------------------------------------------------------------ Personaje
+    M, (torso, brazos, piernas, cabeza, orejas), info = character_frame()
+
+    apply_matrix([torso, brazos, piernas, cabeza, orejas], M)
+    bake_roughness([torso, brazos, piernas, cabeza, orejas])
+    rename_skin([torso, brazos, piernas, cabeza, orejas])
+    export([torso, brazos, piernas], os.path.join(OUT, 'cuerpo.glb'))
+
+    # Cabeza: origen en su centro
+    hmn, hmx = world_bbox([cabeza])
+    hc = (hmn + hmx) / 2
+    half = (hmx - hmn) / 2
+    apply_matrix([cabeza, orejas], Matrix.Translation(-hc))
+    export([cabeza, orejas], os.path.join(OUT, 'cabeza.glb'))
+    # Perfil para la página (convertido a ejes de la web: x, y=arriba, z=adelante)
+    info['head_center_web'] = [round(hc.x, 4), round(hc.z, 4), round(-hc.y, 4)]
+    info['head_half_web'] = [round(half.x, 4), round(half.z, 4), round(half.y, 4)]
+    fmn, fmx = world_bbox([cabeza])
+    info['head_front_web'] = round(-fmn.y, 4)
+
+    # ---------------------------------------------------------------- Prendas
+    # archivo, salida, familia ('char' ya alineada | 'overol' modelada sobre la copia del overol),
+    # ubicación corregida para las copias desplazadas (la de su prenda gemela) y, opcional,
+    # un ajuste fino ya en metros de la página (la chaqueta quedaba 2 cm a la izquierda)
+    GARMENTS = [
+        ('camisa - copia.blend', 'camisa', 'overol', None),
+        ('Camisa.2 - copia.blend', 'camisa-2', 'overol', (0.0379, -0.2013, 1.4328)),
+        ('camisa.manga.larga - copia.blend', 'manga-larga', 'overol', None),
+        ('Chaqueta - copia.blend', 'chaqueta', 'overol', None, (0.0204, 0, 0)),
+        ('Chaqueta.2 - copia.blend', 'chaqueta-2', 'overol', (0.0379, -0.2013, 1.4328)),
+        ('vestido - copia.blend', 'vestido', 'overol', None),
+        ('Jean - copia.blend', 'jean', 'char', None),
+        ('Falda - copia.blend', 'falda', 'char', None),
+        ('Short - copia.blend', 'short', 'char', (0.0102, -1.7545, 1.0246)),
+        ('Overol - copia.blend', 'overol', 'overol', None),
+    ]
+    info['garments'] = {}
+    for fname, out, family, fix_loc, *nudge in GARMENTS:
+        open_blend(fname)
+        meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.visible_get()]
+        for o in meshes:
+            if fix_loc is not None:
+                o.location = fix_loc
+        bpy.context.view_layer.update()
+        delta = OVEROL_TO_CHAR if family == 'overol' else Vector((0, 0, 0))
+        apply_matrix(meshes, Matrix.Translation(Vector(nudge[0] if nudge else (0, 0, 0))) @ M @ Matrix.Translation(delta))
+        bake_roughness(meshes)
+        rename_skin(meshes)
+        export(meshes, os.path.join(OUT, 'ropa', out + '.glb'))
+        gmn, gmx = world_bbox(meshes)
+        info['garments'][out] = {'objects': [o.name for o in meshes], 'bbox_web_min': [round(gmn.x, 3), round(gmn.z, 3), round(-gmx.y, 3)], 'bbox_web_max': [round(gmx.x, 3), round(gmx.z, 3), round(-gmn.y, 3)]}
+
+    with open(os.path.join(OUT, 'perfil-modelos.json'), 'w', encoding='utf-8') as f:
+        json.dump(info, f, indent=1)
+    print('EXPORT_OK')
+
+
+if __name__ == '__main__':
+    main()

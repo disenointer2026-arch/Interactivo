@@ -7,7 +7,6 @@ import { sound } from '../utils/sound.js'
 import { go } from '../utils/router.js'
 import { renderAvatar } from '../three/Snapshot.js'
 import { drawCard, cardSerial } from './cardRenderer.js'
-import { lockup } from './layout.js'
 import { createDialog, openDialog, closeDialog } from './dialog.js'
 import { toast } from './toast.js'
 
@@ -23,7 +22,6 @@ let dataURL = ''
 let blob = null
 let renderToken = 0
 let shareDialog = null
-let flipped = false
 let cleanupTilt = null
 
 /* Días por mes (febrero admite el 29) */
@@ -33,6 +31,12 @@ const MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 function birthdayText (p) {
   if (!p.birthDay || p.birthMonth === '') return ''
   return `${p.birthDay} de ${CARD.months[p.birthMonth]}`
+}
+
+/** Cumpleaños como en la tarjeta ("12/03") o '' si aún no se ha elegido. */
+function birthdayShort (p) {
+  if (!p.birthDay || p.birthMonth === '') return ''
+  return `${String(p.birthDay).padStart(2, '0')}/${String(Number(p.birthMonth) + 1).padStart(2, '0')}`
 }
 
 function dayOptions (month, day) {
@@ -59,21 +63,13 @@ function template () {
   return `
   <section class="cardpage wrap" aria-labelledby="card-title">
     <div class="card-stage">
-      <div class="card3d" id="card3d">
+      <div class="card3d" id="card3d" data-hit>
         <div class="card-face card-front">
           <img id="cardImg" alt="Tarjeta coleccionable de ${esc(p.name || 'tu avatar')}" />
           <span class="card-shine" aria-hidden="true"></span>
           <div class="card-generating" aria-hidden="true"><span class="spinner-leaf">${icon('leaf')}</span><span>Generando tu tarjeta…</span></div>
         </div>
-        <div class="card-face card-back" aria-hidden="true">
-          <div class="card-back-inner">
-            ${lockup('lockup--stack')}
-            <p>Esta tarjeta guarda una creación única.</p>
-            <span class="card-back-serial">N.º ${cardSerial(store.state)}</span>
-          </div>
-        </div>
       </div>
-      <button type="button" class="chip-btn card-flip" data-flip aria-pressed="false">${icon('rotate')}<span>Voltear tarjeta</span></button>
     </div>
 
     <div class="card-panel">
@@ -86,7 +82,7 @@ function template () {
       <fieldset class="opt-group">
         <legend>Fondo</legend>
         <div class="theme-row" role="radiogroup" aria-label="Fondo">
-          ${CARD.themes.map(t => `<button type="button" class="theme-opt" role="radio" data-theme="${t.id}" aria-checked="${t.id === p.theme}" tabindex="${t.id === p.theme ? 0 : -1}" style="--from:${t.from};--to:${t.to};--leaf:${t.leaf}"><span class="theme-swatch" aria-hidden="true"></span><span>${t.name}</span></button>`).join('')}
+          ${CARD.themes.map(t => `<button type="button" class="theme-opt" role="radio" data-theme="${t.id}" aria-checked="${t.id === p.theme}" tabindex="${t.id === p.theme ? 0 : -1}" style="--from:${t.from};--to:${t.to};--leaf:${t.accent}"><span class="theme-swatch" aria-hidden="true"></span><span>${t.name}</span></button>`).join('')}
         </div>
       </fieldset>
 
@@ -105,9 +101,8 @@ function template () {
 async function regenerate (first = false) {
   const token = ++renderToken
   const p = store.profile
-  const date = new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
   const birthday = birthdayText(p)
-  const canvas = await drawCard({ portrait, name: p.name || 'Tu avatar', birthday, theme: p.theme, avatar: store.state, date })
+  const canvas = await drawCard({ portrait, name: p.name || 'Tu avatar', birthday: birthdayShort(p), theme: p.theme, avatar: store.state })
   if (token !== renderToken || !root) return
   dataURL = canvas.toDataURL('image/png')
   canvas.toBlob(b => { blob = b }, 'image/png')
@@ -121,7 +116,8 @@ function reveal () {
   const card = $('#card3d', root)
   const tl = gsap.timeline()
   tl.to($('.card-generating', root), { autoAlpha: 0, duration: 0.3 })
-    .fromTo(card, { rotationY: -180, scale: 0.8, y: 30 }, { rotationY: 0, scale: 1, y: 0, duration: REDUCED_MOTION ? 0.01 : 1.2, ease: 'power3.out' }, 0)
+    // Entra bajando desde arriba (la tarjeta no tiene reverso, así que no gira)
+    .fromTo(card, { y: -90, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: REDUCED_MOTION ? 0.01 : 0.9, ease: 'back.out(1.3)' }, 0)
     .fromTo($('.card-shine', root), { backgroundPosition: '-150% 0' }, { backgroundPosition: '250% 0', duration: 1.2, ease: 'power2.inOut' }, 0.7)
     .add(() => {
       const ready = $('#ready', root)
@@ -140,13 +136,28 @@ function tilt () {
     const r = stageEl.getBoundingClientRect()
     const x = (e.clientX - r.left) / r.width - 0.5
     const y = (e.clientY - r.top) / r.height - 0.5
-    gsap.to(card, { rotationY: (flipped ? 180 : 0) + x * 14, rotationX: -y * 12, duration: 0.6, ease: 'power2.out' })
+    gsap.to(card, { rotationY: x * 14, rotationX: -y * 12, duration: 0.6, ease: 'power2.out' })
     $('.card-shine', root).style.setProperty('--mx', `${(x + 0.5) * 100}%`)
   }
-  const leave = () => gsap.to(card, { rotationY: flipped ? 180 : 0, rotationX: 0, duration: 0.8, ease: 'power3.out' })
+  const leave = () => gsap.to(card, { rotationY: 0, rotationX: 0, duration: 0.8, ease: 'power3.out' })
   stageEl.addEventListener('pointermove', move)
   stageEl.addEventListener('pointerleave', leave)
   return () => { stageEl.removeEventListener('pointermove', move); stageEl.removeEventListener('pointerleave', leave) }
+}
+
+/* Al hacer clic la tarjeta reacciona como si la golpearan: se hunde por el lado
+   donde recibió el golpe, destella y rebota hasta quedar quieta */
+function hit (e) {
+  const card = $('#card3d', root)
+  const r = card.getBoundingClientRect()
+  const x = (e.clientX - r.left) / r.width - 0.5
+  const y = (e.clientY - r.top) / r.height - 0.5
+  sound.play('pop')
+  if (REDUCED_MOTION) return
+  gsap.timeline()
+    .to(card, { scale: 0.92, rotationY: x * 24, rotationX: -y * 20, z: -40, duration: 0.08, ease: 'power2.out', overwrite: 'auto' })
+    .to(card, { scale: 1, rotationY: 0, rotationX: 0, z: 0, duration: 1, ease: 'elastic.out(1.1, 0.32)' })
+  gsap.fromTo($('.card-shine', root), { backgroundPosition: '-150% 0' }, { backgroundPosition: '250% 0', duration: 0.7, ease: 'power2.out' })
 }
 
 /* ---------- Compartir (simulado) ---------- */
@@ -251,14 +262,7 @@ function onClick (e) {
     sound.play('pop')
     return regenerate()
   }
-  const flip = e.target.closest('[data-flip]')
-  if (flip) {
-    flipped = !flipped
-    flip.setAttribute('aria-pressed', flipped)
-    gsap.to($('#card3d', root), { rotationY: flipped ? 180 : 0, rotationX: 0, duration: 0.9, ease: 'power3.inOut' })
-    sound.play('soft')
-    return
-  }
+  if (e.target.closest('[data-hit]')) return hit(e)
   const share = e.target.closest('[data-share]')
   if (share) {
     share.classList.remove('is-nudging') // la sacudida solo invita al primer clic
@@ -280,7 +284,6 @@ export const cardView = {
   name: 'card',
   async mount (el) {
     root = el
-    flipped = false
     el.innerHTML = template()
     gsap.from($$('.card-panel > *', el), { y: 14, autoAlpha: 0, stagger: 0.06, duration: 0.5, delay: 0.1 })
     el.addEventListener('input', onInput)

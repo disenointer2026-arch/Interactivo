@@ -154,11 +154,24 @@ export function createEnvironment () {
   const decorations = group(shelf(), fence(), stool())
   decorations.children[2].position.set(-1.35, 0, -0.4)
   const leaves = fallingLeaves()
+  root.add(leaves.group)
+  const loader = new GLTFLoader()
 
-  root.add(floor, plants, decorations, leaves.group)
+  // Isla final: reemplaza suelo, plantas y decoración. La procedural solo aparece si no carga.
+  if (SCENE.islandModel) {
+    loader.loadAsync(SCENE.islandModel).then(gltf => {
+      gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true } })
+      root.add(gltf.scene)
+    }).catch(err => {
+      console.warn(`[ambiente] No se pudo cargar ${SCENE.islandModel}. Se usa la isla procedural.`, err)
+      root.add(floor, plants, decorations)
+    })
+    return { group: root, update (t) { leaves.update(t) } }
+  }
+
+  root.add(floor, plants, decorations)
 
   // Reemplazo opcional por modelos .glb
-  const loader = new GLTFLoader()
   const parts = { floor, plants, decorations }
   Object.entries(SCENE.environmentModels).forEach(([name, url]) => {
     if (!url) return

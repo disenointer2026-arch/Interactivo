@@ -105,11 +105,10 @@ function mainButton (act, label) {
 }
 
 /* ---------- Panel de opciones ---------- */
-function groupHTML (g, i, groups) {
+function groupHTML (g) {
   const value = store.state[g.key]
-  // Con un solo grupo el título ya lo da el cartel de la pestaña, y en los botones con
-  // imagen el dibujo basta: el título queda solo para lectores de pantalla
-  const legend = `<legend class="${groups.length === 1 || g.type === 'images' ? 'sr-only' : ''}">${esc(g.label)}</legend>`
+  // Sin títulos visibles: los grupos se separan con una línea (los nombres quedan para lectores de pantalla)
+  const legend = `<legend class="sr-only">${esc(g.label)}</legend>`
   if (g.type === 'colors') {
     return `
       <fieldset class="opt-group">
@@ -145,11 +144,11 @@ function groupHTML (g, i, groups) {
       <div class="opt-grid" role="radiogroup" aria-label="${esc(g.label)}">
         ${g.options.map(o => `
           <button type="button" class="opt" role="radio" data-key="${g.key}" data-id="${o.id}"
-            aria-checked="${o.id === value}" tabindex="${o.id === value ? 0 : -1}">
+            aria-checked="${o.id === value}" tabindex="${o.id === value ? 0 : -1}" title="${esc(o.name)}">
             <span class="opt-thumb" data-thumb="${g.key}:${o.id}">
               ${o.thumbnail ? `<img src="${o.thumbnail}" alt="" />` : '<span class="thumb-skeleton"></span>'}
             </span>
-            <span class="opt-name">${esc(o.name)}</span>
+            <span class="opt-name sr-only">${esc(o.name)}</span>
             <span class="opt-check" aria-hidden="true">${icon('check')}</span>
           </button>`).join('')}
       </div>
@@ -160,7 +159,7 @@ function renderPanel (animate = true) {
   const cat = CATEGORIES.find(c => c.id === activeCat)
   const panel = $('#catPanel', root)
   panel.setAttribute('aria-labelledby', `tab-${cat.id}`)
-  panel.innerHTML = cat.groups.map(groupHTML).join('')
+  panel.innerHTML = cat.groups.map(g => groupHTML(g)).join('')
   panel.scrollTop = 0
   if (animate) gsap.from($$('.opt-group', panel), { y: 12, autoAlpha: 0, stagger: 0.06, duration: 0.35, ease: 'power2.out' })
   queueThumbs(cat)
@@ -200,7 +199,7 @@ function queueThumbs (cat) {
       const cfg = { ...store.state, [g.key]: o.id }
       let url = null
       if (g.thumb === 'part') url = await renderPart(slot.slot, o, cfg, 160)
-      else url = await renderAvatar(cfg, { width: 160, height: 160, framing: g.thumb === 'bust' ? 'bust' : 'full' })
+      else url = await renderAvatar(cfg, { width: 160, height: 160, framing: g.thumb === 'bust' ? 'bust' : 'full', ...g.thumbView })
       const box = $(`[data-thumb="${g.key}:${o.id}"]`, root)
       if (box && gen === thumbGen) {
         box.innerHTML = url ? `<img src="${url}" alt="" />` : `<span class="thumb-none">${icon('none')}</span>`

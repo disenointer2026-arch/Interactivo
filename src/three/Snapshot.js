@@ -38,7 +38,10 @@ function setup () {
 function frameBox (box, { angle = 0.35, elevation = 0.12, pad = 1.25 } = {}) {
   const center = box.getCenter(new THREE.Vector3())
   const size = box.getSize(new THREE.Vector3())
-  const radius = Math.max(size.x, size.y, size.z * 0.8) * 0.5
+  // De perfil se ve la profundidad (z) en lugar del ancho (x): se usa la que quede de frente
+  const side = Math.abs(Math.sin(angle))
+  const across = size.x * (1 - side) + size.z * side
+  const radius = Math.max(across, size.y, size.z * 0.8) * 0.5
   const dist = (radius * pad) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
   const dir = new THREE.Vector3(Math.sin(angle), elevation, Math.cos(angle)).normalize()
   camera.position.copy(center).addScaledVector(dir, dist)
@@ -59,25 +62,31 @@ function capture (obj, width, height, frame) {
   return url
 }
 
-/** Retrato del avatar completo o del busto. framing: 'full' | 'bust' | 'portrait' */
-export async function renderAvatar (config, { width = 512, height = 512, framing = 'full', angle = 0.35 } = {}) {
+/** Retrato del avatar completo o del busto. framing: 'full' | 'bust' | 'portrait'
+    angle: giro de la cámara alrededor del avatar (0 = de frente); elevation: altura de la mirada. */
+export async function renderAvatar (config, { width = 512, height = 512, framing = 'full', angle, elevation } = {}) {
   if (!setup()) return null
-  const key = `avatar:${framing}:${width}x${height}:${angle}:${JSON.stringify(config)}`
+  const bust = framing === 'bust'
+  angle = angle ?? (bust ? 0.21 : 0.35)
+  elevation = elevation ?? (bust ? 0.05 : 0.14)
+  const key = `avatar:${framing}:${width}x${height}:${angle}:${elevation}:${JSON.stringify(config)}`
   if (cache.has(key)) return cache.get(key)
   const avatar = new Avatar({ animated: false })
   await avatar.build(config)
   const d = avatar.dims
   const url = capture(avatar.root, width, height, () => {
     let box
-    if (framing === 'bust') {
+    if (bust) {
       box = new THREE.Box3(
         new THREE.Vector3(-d.headR * 1.1, d.headY - d.headR * 1.25, -d.headR),
         new THREE.Vector3(d.headR * 1.1, d.headY + d.headR * 1.05, d.headR)
       )
-      frameBox(box, { angle: angle * 0.6, elevation: 0.05, pad: 1.05 })
+      // Incluye todo el cabello (moños y colas sobresalen por detrás de la cabeza)
+      box.union(new THREE.Box3().setFromObject(avatar.headGroup))
+      frameBox(box, { angle, elevation, pad: 1.05 })
     } else {
       box = new THREE.Box3().setFromObject(avatar.root)
-      frameBox(box, { angle, elevation: 0.14, pad: framing === 'portrait' ? 1.02 : 1.12 })
+      frameBox(box, { angle, elevation, pad: framing === 'portrait' ? 1.02 : 1.12 })
     }
   })
   avatar.dispose()

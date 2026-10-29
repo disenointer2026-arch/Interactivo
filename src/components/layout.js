@@ -125,14 +125,14 @@ export function renderFooter (el) {
           <img class="hf-logo" src="images/logo-miniso.png" alt="MINISO × Animal Crossing" width="1000" height="1175" />
           <p class="hf-inquiries">
             <span>${icon('store')}${FOOTER.inquiriesLabel}</span>
-            <a href="mailto:${FOOTER.email}">${FOOTER.email}</a>
+            <a href="#/" data-top>${FOOTER.email}</a>
           </p>
         </div>
         <nav class="hf-cols" aria-label="Pie de página">
           ${FOOTER.columns.map(c => `
             <div class="hf-col">
-              <h2>${c.href ? `<a href="${c.href}"${out(c.href)}>${c.title}</a>` : c.title}</h2>
-              ${c.links.length ? `<ul>${c.links.map(l => `<li><a href="${l.href}"${out(l.href)}>${l.label}</a></li>`).join('')}</ul>` : ''}
+              <h2><a href="#/" data-top>${c.title}</a></h2>
+              ${c.links.length ? `<ul>${c.links.map(l => `<li><a href="#/" data-top>${l}</a></li>`).join('')}</ul>` : ''}
             </div>`).join('')}
         </nav>
       </div>
@@ -143,6 +143,13 @@ export function renderFooter (el) {
         </div>
       </div>
     </div>`
+
+  // Los enlaces del pie no salen del sitio: llevan a la parte superior del inicio
+  el.addEventListener('click', e => {
+    if (!e.target.closest('[data-top]')) return
+    e.preventDefault()
+    goSection('inicio')
+  })
 }
 
 /** Botón flotante para volver arriba: aparece al empezar a desplazarse. */

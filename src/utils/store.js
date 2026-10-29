@@ -1,4 +1,5 @@
 import { DEFAULT_AVATAR, sanitizeAvatar, resolveHides } from '../data/avatarOptions.js'
+import { CARD } from '../data/content.js'
 import { storage } from './storage.js'
 
 /* ==========================================================================
@@ -28,7 +29,9 @@ class Store {
     this.past = []
     this.future = []
     this.listeners = new Set()
-    this.profile = { name: '', birthDay: '', birthMonth: '', theme: 'spring', ...(storage.get(KEYS.profile) || {}) }
+    this.profile = { name: '', birthDay: '', birthMonth: '', ...(storage.get(KEYS.profile) || {}) }
+    // Un fondo guardado que ya no existe (los temas cambiaron) vuelve al primero
+    if (!CARD.themes.some(t => t.id === this.profile.theme)) this.profile.theme = CARD.themes[0].id
     this.order = storage.get(KEYS.order)
     this.flags = storage.get(KEYS.flags, {})
     this.session = null // sesión simulada, solo en memoria

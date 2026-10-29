@@ -1,11 +1,9 @@
-# Ambiente (.glb)
+# Modelos del ambiente (.glb)
 
-Reemplaza la isla procedural escribiendo las rutas en `src/data/sceneConfig.js`:
+`isla.glb` es la isla final (zip "isla"), exportada con:
 
-    environmentModels: {
-      floor: 'models/environment/floor.glb',
-      plants: 'models/environment/plants.glb',
-      decorations: 'models/environment/decorations.glb'
-    }
+    blender -b --disable-autoexec --python tools/blender/export_island.py -- <carpeta del personaje> <carpeta de la isla> static/models/environment/isla.glb
 
-El avatar se para en (0, 0, 0). Deja libre un círculo de ~1 m de radio alrededor.
+Recibe la misma escala que el personaje y el lugar del avatar queda en el origen.
+Se enlaza en `islandModel` de `src/data/sceneConfig.js`; si no carga, la página usa
+la isla procedural de `src/three/Environment.js`.

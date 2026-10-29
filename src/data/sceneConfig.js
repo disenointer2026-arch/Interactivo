@@ -4,8 +4,11 @@
    ========================================================================== */
 
 export const SCENE = {
-  // Si agregas modelos propios del ambiente, escribe aquí sus rutas (dentro de /static).
-  // Si una ruta es null, se usa el placeholder procedural.
+  // Isla final (exportada con tools/blender/export_island.py): reemplaza todo el ambiente
+  // procedural. Si es null o no carga, se usa la isla procedural de abajo.
+  islandModel: 'models/environment/isla.glb',
+
+  // Modelos sueltos opcionales para la isla procedural (rutas dentro de /static; null = procedural)
   environmentModels: {
     floor: null, // 'models/environment/floor.glb'
     plants: null, // 'models/environment/plants.glb'
