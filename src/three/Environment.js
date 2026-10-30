@@ -160,7 +160,16 @@ export function createEnvironment () {
   // Isla final: reemplaza suelo, plantas y decoración. La procedural solo aparece si no carga.
   if (SCENE.islandModel) {
     loader.loadAsync(SCENE.islandModel).then(gltf => {
-      gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true } })
+      gltf.scene.traverse(o => {
+        if (!o.isMesh) return
+        // El suelo y el pasto plano solo reciben sombra: si también la proyectan, el suelo
+        // se sombrea a sí mismo y aparecen franjas en forma de anillos ("shadow acne")
+        o.castShadow = !/^(suelo|cesped)/i.test(o.name)
+        o.receiveShadow = true
+        // Mate: sin el reflejo de luz que dejaba el sol sobre el pasto
+        o.material.roughness = 1
+        o.material.metalness = 0
+      })
       root.add(gltf.scene)
     }).catch(err => {
       console.warn(`[ambiente] No se pudo cargar ${SCENE.islandModel}. Se usa la isla procedural.`, err)

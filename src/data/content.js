@@ -12,6 +12,7 @@ export const SITE = {
 /* Secciones del sitio real de MINISO a las que apuntan el menú y el pie.
    Cambia aquí una dirección y se actualiza en los dos sitios. */
 export const MINISO_LINKS = {
+  colombia: 'https://www.miniso.co/',
   marca: 'https://miniso.com/brand/index.html',
   productos: 'https://miniso.com/product/index.html',
   tiendas: 'https://miniso.com/shop/image_3.html',
@@ -195,7 +196,7 @@ export const TESTIMONIALS = [
 
 /* Productos físicos (precios ficticios en COP) */
 export const PRODUCTS = [
-  { id: 'figure', name: 'Figura', detail: 'Una figura de tu avatar con el llavero que se seleccionó, incluye una cadena para uso como llavero y una base de acrílico para su uso como figura coleccionable.', price: 89900, days: '7 a 10 días hábiles' }
+  { id: 'figure', name: 'Figura', detail: 'Una figura de tu avatar con el charm que se seleccionó, incluye una cadena para uso como llavero y una base de acrílico para su uso como figura coleccionable.', price: 89900, days: '7 a 10 días hábiles' }
 ]
 
 export const SHIPPING = { cost: 9900, freeFrom: 150000 }

@@ -129,7 +129,6 @@ export const CATEGORIES = [
         key: 'hair', label: 'Estilo', type: 'options', thumb: 'bust', thumbView: { angle: 1.3, elevation: 0.22 },
         options: [
           { id: 'none', name: 'Sin cabello' },
-          { id: 'recto', name: 'Recto', model: 'models/avatar/cabello/recto.glb', builder: 'short' },
           { id: 'corto', name: 'Corto', model: 'models/avatar/cabello/corto.glb', builder: 'short' },
           { id: 'flequillo', name: 'Flequillo', model: 'models/avatar/cabello/flequillo.glb', builder: 'bangs' },
           { id: 'picos', name: 'Picos', model: 'models/avatar/cabello/picos.glb', builder: 'spiky' },
@@ -248,12 +247,12 @@ export const CATEGORIES = [
   },
   {
     id: 'objects',
-    label: 'Llavero',
+    label: 'Charm',
     tab: { icon: 'boton-llavero.svg', theme: 'green' },
     camera: 'full',
     groups: [
       {
-        key: 'companion', label: 'Llavero', type: 'options', thumb: 'part',
+        key: 'companion', label: 'Charm', type: 'options', thumb: 'part',
         options: [
           { id: 'none', name: 'Nada' },
           { id: 'bolsa-dinero', name: 'Bolsa de dinero', model: 'models/avatar/llaveros/bolsa-dinero.glb', place: KEYCHAIN_SPOT },

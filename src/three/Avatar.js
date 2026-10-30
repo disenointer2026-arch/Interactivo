@@ -52,6 +52,35 @@ function hairCutUniform (mat) {
   return cut
 }
 
+const _q = new THREE.Quaternion()
+
+/* Poses para retratos: [nod, tilt] por hueso (nombres sin punto, como quedan en el .glb).
+   nod gira alrededor del eje x (negativo = hacia adelante en brazos y piernas, hacia atrás
+   en la cabeza); tilt alrededor del eje z (positivo sube el brazo izquierdo, el de la
+   derecha vista de frente). "retrato": de pie y relajada, como el arte del juego: brazos
+   un poco hacia adelante, cabeza ladeada y un pie apenas adelantado (deforma poco la ropa) */
+const POSES = {
+  // Al pulsar "Finalizar avatar": saluda doblando solo el antebrazo (el hombro casi no se
+  // mueve, así la ropa no se deforma), ladea la cabeza y da un saltito
+  celebrar: {
+    cabeza: [-0.1, 0.12],
+    brazoL: [-0.15, 0.15],
+    antebrazoL: [-0.2, 0.95],
+    brazoD: [-0.1, 0.1]
+  },
+  retrato: {
+    torso: [0, -0.03],
+    cabeza: [-0.06, 0.1],
+    brazoL: [-0.35, -0.38],
+    antebrazoL: [-0.3, 0.08],
+    brazoD: [-0.35, 0.38],
+    antebrazoD: [-0.3, -0.08],
+    musloD: [-0.12, 0],
+    piernaD: [0.05, 0],
+    MusloL: [0.06, 0]
+  }
+}
+
 export const SLOT_BY_KEY = Object.fromEntries(SLOTS.filter(s => s.key).map(s => [s.key, s]))
 
 export class Avatar {
@@ -118,6 +147,8 @@ export class Avatar {
   }
 
   _updateDims () {
+    // La cabeza vuelve al cuerpo mientras se recalcula (después se engancha al hueso)
+    if (this.headGroup.parent !== this.bodyGroup) this.bodyGroup.attach(this.headGroup)
     const dims = computeDims(this.config.bodyType)
     this.dims = BASE_MODELS.head ? fitToModel(dims) : dims
     this.headGroup.position.set(0, this.dims.headY, 0)
@@ -157,6 +188,8 @@ export class Avatar {
     const old = this.parts[def.slot]
     this.parts[def.slot] = obj
     parent.add(obj)
+    if (def.slot === 'body') this._useSkeleton(obj, old)
+    else this._bindToSkeleton(obj)
     this._applyHides()
     this._applyHairCut()
 
@@ -164,6 +197,83 @@ export class Avatar {
       old.removeFromParent()
       disposeObject(old)
     }
+  }
+
+  /* ---------- Esqueleto (cuerpo.glb trae los huesos) ----------
+     La cabeza (con pelo, ojos y accesorios) se engancha al hueso "cabeza" y la ropa,
+     que trae una copia del esqueleto, se une a los huesos del cuerpo. */
+  _useSkeleton (body, old) {
+    // Si la cabeza colgaba del cuerpo anterior, vuelve al grupo antes de que se libere
+    if (old && this.headGroup.parent !== this.bodyGroup) this.bodyGroup.attach(this.headGroup)
+    this.bones = {}
+    body.traverse(o => { if (o.isBone) this.bones[o.name] = o })
+    const head = this.bones.cabeza
+    if (!head) { this.bones = null; return }
+    this.root.updateMatrixWorld(true)
+    head.attach(this.headGroup)
+    // Pose de reposo y ejes de giro (en el espacio de cada hueso) para la animación
+    this.rest = {}
+    Object.values(this.bones).forEach(b => {
+      const inv = b.getWorldQuaternion(new THREE.Quaternion()).invert()
+      this.rest[b.name] = {
+        q: b.quaternion.clone(),
+        x: new THREE.Vector3(1, 0, 0).applyQuaternion(inv), // asentir (adelante/atrás)
+        z: new THREE.Vector3(0, 0, 1).applyQuaternion(inv) // inclinar a los lados
+      }
+    })
+    Object.entries(this.parts).forEach(([slot, p]) => { if (slot !== 'body') this._bindToSkeleton(p) })
+  }
+
+  _bindToSkeleton (obj) {
+    if (!this.bones) return
+    obj.traverse(m => {
+      if (!m.isSkinnedMesh) return
+      const bones = m.skeleton.bones.map(b => this.bones[b.name])
+      if (bones.every(Boolean)) m.bind(new THREE.Skeleton(bones, m.skeleton.boneInverses), m.bindMatrix)
+    })
+  }
+
+  /** Gira un hueso desde su reposo: nod alrededor del eje x del mundo, tilt alrededor del z. */
+  _pose (name, nod, tilt) {
+    const b = this.bones[name]
+    const r = this.rest[name]
+    if (!b || !r) return
+    b.quaternion.copy(r.q)
+      .multiply(_q.setFromAxisAngle(r.x, nod))
+      .multiply(_q.setFromAxisAngle(r.z, tilt))
+  }
+
+  /** Pose fija para retratos (sin animación). nod/tilt en radianes por hueso. */
+  setPose (name, k = 1) {
+    if (!this.bones) return
+    Object.keys(this.rest).forEach(n => this._pose(n, 0, 0))
+    Object.entries(POSES[name] || {}).forEach(([bone, [nod, tilt]]) => this._pose(bone, nod * k, tilt * k))
+  }
+
+  /** Pasa a una pose con animación y la mantiene (pausa el movimiento de reposo). */
+  playPose (name, { duration = 0.45, hold = 0.6 } = {}) {
+    if (!this.bones) return Promise.resolve()
+    this.posing = name
+    const blend = { k: 0 }
+    return new Promise(resolve => {
+      gsap.timeline({ onComplete: resolve })
+        .to(blend, { k: 1, duration, ease: 'back.out(2.2)', onUpdate: () => this.setPose(name, blend.k) })
+        // Saltito de todo el personaje (no deforma nada)
+        .to(this.bodyGroup.position, { y: 0.12, duration: 0.18, ease: 'power2.out', yoyo: true, repeat: 1 }, 0.1)
+        .to({}, { duration: hold })
+    })
+  }
+
+  /** Vuelve de la pose al reposo y reanuda el movimiento. */
+  releasePose (duration = 0.5) {
+    const name = this.posing
+    if (!name || !this.bones) return
+    const blend = { k: 1 }
+    gsap.to(blend, {
+      k: 0, duration, ease: 'power2.inOut',
+      onUpdate: () => this.setPose(name, blend.k),
+      onComplete: () => { this.posing = null }
+    })
   }
 
   /** Ubicación propia de la opción (p. ej. los llaveros, en el suelo detrás del personaje).
@@ -210,12 +320,22 @@ export class Avatar {
     })
   }
 
-  /** Animación de reposo: respiración y balanceo (sin parpadeo: los ojos son mapas UV). */
+  /** Animación de reposo con los huesos, sin flotar (sin parpadeo: los ojos son mapas UV). */
   update (t) {
     if (!this.animated || !this.dims) return
-    this.bodyGroup.position.y = Math.sin(t * 2.1) * 0.006
-    this.headGroup.rotation.z = Math.sin(t * 0.9) * 0.035
-    this.headGroup.rotation.x = Math.sin(t * 0.7) * 0.02
+    if (this.posing) {
+      // Durante una pose (p. ej. al finalizar) no se mueven los huesos
+    } else if (this.bones) {
+      // Con los pies en el suelo: respira el torso, los brazos se mecen y la cabeza se ladea
+      this._pose('torso', Math.sin(t * 2.1) * 0.012, 0)
+      // Los nombres pierden el punto al cargar el .glb: "brazo.L" → "brazoL"
+      this._pose('brazoL', 0, Math.sin(t * 1.6) * 0.07)
+      this._pose('brazoD', 0, -Math.sin(t * 1.6 + 0.5) * 0.07)
+      this._pose('cabeza', Math.sin(t * 0.7) * 0.03, Math.sin(t * 0.9) * 0.05)
+    } else {
+      this.headGroup.rotation.z = Math.sin(t * 0.9) * 0.035
+      this.headGroup.rotation.x = Math.sin(t * 0.7) * 0.02
+    }
 
     const comp = this.parts.companion
     if (comp && comp.userData.bob) {

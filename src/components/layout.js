@@ -1,4 +1,4 @@
-import { SITE, HOME_NAV, MINISO_NAV, SECTIONS, FOOTER } from '../data/content.js'
+import { SITE, HOME_NAV, MINISO_NAV, MINISO_LINKS, SECTIONS, FOOTER } from '../data/content.js'
 import { icon } from '../utils/icons.js'
 import { goSection } from '../utils/router.js'
 import { sound } from '../utils/sound.js'
@@ -24,7 +24,7 @@ const out = href => href.startsWith('http') ? ' target="_blank" rel="noopener no
 export function renderHeader (el) {
   el.innerHTML = `
     <div class="hh-inner">
-      <a class="hh-brand" href="#/" aria-label="Inicio: MINISO × Animal Crossing">
+      <a class="hh-brand" href="${MINISO_LINKS.colombia}"${out(MINISO_LINKS.colombia)} aria-label="MINISO Colombia (se abre en una pestaña nueva)">
         <img class="hh-mark" src="images/logo-miniso.png" alt="" width="1000" height="1175" />
         <span class="sr-only">MINISO × Animal Crossing</span>
       </a>

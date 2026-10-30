@@ -21,7 +21,6 @@ EXTRAS = [
     ('Botas.blend', 'zapatos/botas', 'cuerpo', None),
     ('Sandalias.blend', 'zapatos/sandalias', 'cuerpo', None),
 
-    ('Cabello.corto.recto.blend', 'cabello/recto', 'cabeza', 'hair'),
     ('Cabello.corto.H.blend', 'cabello/corto', 'cabeza', 'hair'),
     ('cabello.corto.Hfleco.blend', 'cabello/flequillo', 'cabeza', 'hair'),
     ('Cabello.corto.picos.blend', 'cabello/picos', 'cabeza', 'hair'),

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js'
 import { BUILDERS } from './parts/index.js'
 import { ROLE_TO_KEY, PLASTIC, skyTexture, roleColor } from './materials.js'
 import { BASE_MODELS } from '../data/avatarOptions.js'
@@ -55,7 +56,8 @@ export async function headGeometry () {
 
 async function loadModel (url, ctx) {
   const gltf = await gltfOf(url)
-  const obj = gltf.scene.clone(true)
+  // SkeletonUtils: cada copia de un modelo con huesos (cuerpo y ropa) tiene su propio esqueleto
+  const obj = cloneSkinned(gltf.scene)
   obj.traverse(o => {
     if (!o.isMesh) return
     o.castShadow = true

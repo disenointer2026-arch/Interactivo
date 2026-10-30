@@ -1,7 +1,7 @@
 import gsap from 'gsap'
 import { CATEGORIES, randomAvatar, hiddenKeys } from '../data/avatarOptions.js'
 import { icon } from '../utils/icons.js'
-import { esc, cssUrl, $, $$ } from '../utils/format.js'
+import { esc, cssUrl, $, $$, REDUCED_MOTION } from '../utils/format.js'
 import { store } from '../utils/store.js'
 import { sound } from '../utils/sound.js'
 import { go } from '../utils/router.js'
@@ -236,6 +236,21 @@ function setSpin (on) {
   if (b) b.setAttribute('aria-pressed', on)
 }
 
+/* "Finalizar avatar": el personaje celebra con los brazos arriba y luego pasa a la
+   pantalla final, donde vuelve a su pose de reposo */
+let finishing = false
+async function finish () {
+  if (finishing) return
+  finishing = true
+  sound.fx('confirm')
+  store.save()
+  const avatar = stage && stage.avatar
+  if (avatar && !REDUCED_MOTION) await avatar.playPose('celebrar')
+  finishing = false
+  go('/listo')
+  if (avatar) setTimeout(() => avatar.releasePose(), 450)
+}
+
 function onAction (act) {
   switch (act) {
     case 'undo': if (store.undo()) sound.play('soft'); break
@@ -264,10 +279,7 @@ function onAction (act) {
     }
     case 'help': openInstructions(); break
     case 'done':
-      sound.fx('confirm')
-      store.save()
-      go('/listo')
-      break
+      return finish()
   }
 }
 

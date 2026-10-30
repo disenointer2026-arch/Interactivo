@@ -9,6 +9,15 @@ Exportados desde `Modelos.Interactivo` con `tools/blender/export_models.py`
 - `cabeza.glb`: cabeza y orejas. Origen en el centro de la cabeza.
 - `ropa/*.glb`: prendas, alineadas al cuerpo (origen en el suelo).
 
+Con huesos (zip "Avatar-huesos"), con `tools/blender/export_rig.py`:
+
+    blender -b --disable-autoexec --python tools/blender/export_rig.py -- <carpeta del personaje> <carpeta con AnimalCrossingCharacter.blend> static/models/avatar
+
+- `cuerpo.glb` lleva el esqueleto "Esqueleto"; la cabeza (con pelo, ojos y accesorios)
+  se engancha en la página al hueso `cabeza`.
+- `ropa/*.glb` reciben los pesos del cuerpo y una copia del esqueleto; en la página se
+  unen a los huesos del cuerpo. La animación de reposo está en `Avatar.update`.
+
 Desde "Modelos restantes", con `tools/blender/export_extras.py`:
 
     blender -b --disable-autoexec --python tools/blender/export_extras.py -- <carpeta del personaje> <carpeta de extras> static/models/avatar

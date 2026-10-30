@@ -6,16 +6,19 @@
 #
 # GROUND_SCALE achica solo el suelo (desde el centro). El árbol, los arbustos y el pasto
 # conservan su tamaño y solo se acercan al centro en la misma proporción, para no quedar
-# fuera del borde. El tronco y la copa del árbol se mueven juntos.
+# fuera del borde. El tronco y la copa del árbol se mueven juntos (y TREE_BACK los aleja).
 import bpy, sys, os
 from mathutils import Matrix, Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import export_models as base  # noqa: E402
 
-GROUND_SCALE = 0.6
+GROUND_SCALE = 0.85
 GROUND = 'suelo'
 TREE = ('Esfera', 'Círculo')  # copa y tronco
+# La copa tiene ramas bajas a la altura de la cabeza: el árbol se aleja hacia atrás
+# (metros de la página) para que peinados y accesorios no se metan entre las hojas
+TREE_BACK = 0.5
 
 
 def center_xy(objs):
@@ -23,7 +26,7 @@ def center_xy(objs):
     return Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, 0))
 
 
-def shrink_ground(meshes):
+def shrink_ground(meshes, scale):
     f = GROUND_SCALE
     by_name = {o.name: o for o in meshes}
     ground = by_name[GROUND]
@@ -33,6 +36,8 @@ def shrink_ground(meshes):
     for objs in groups:
         c = center_xy(objs)
         base.apply_matrix(objs, Matrix.Translation(c * (f - 1)))
+    # Atrás es +Y en Blender (el personaje mira hacia -Y)
+    base.apply_matrix(tree, Matrix.Translation(Vector((0, TREE_BACK / scale, 0))))
 
 
 def main():
@@ -45,7 +50,7 @@ def main():
     base.SRC = island_dir
     base.open_blend('isla.blend')
     meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.visible_get()]
-    shrink_ground(meshes)
+    shrink_ground(meshes, info['scale'])
     base.apply_matrix(meshes, Matrix.Scale(info['scale'], 4))
     base.bake_roughness(meshes)
     os.makedirs(os.path.dirname(out_path), exist_ok=True)

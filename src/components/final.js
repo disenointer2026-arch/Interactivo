@@ -25,7 +25,7 @@ export function summaryItems (state) {
     !hidden.has('pants') && ['Parte inferior', getOptionName('pants', state.pants)],
     ['Zapatos', getOptionName('shoes', state.shoes)]
   ].filter(Boolean)
-  rows.push(['Llavero', state.companion === 'none' ? 'Ninguno' : getOptionName('companion', state.companion)])
+  rows.push(['Charm', state.companion === 'none' ? 'Ninguno' : getOptionName('companion', state.companion)])
   return rows
 }
 

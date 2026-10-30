@@ -137,6 +137,37 @@ def rename_skin(objs):
             if slot.material and slot.material.name.lower().startswith(('piel', 'skin')):
                 slot.material.name = 'skin'
 
+# archivo, salida, familia ('char' ya alineada | 'overol' modelada sobre la copia del overol),
+# ubicación corregida para las copias desplazadas (la de su prenda gemela) y, opcional,
+# un ajuste fino ya en metros de la página (la chaqueta quedaba 2 cm a la izquierda)
+GARMENTS = [
+    ('camisa - copia.blend', 'camisa', 'overol', None),
+    ('Camisa.2 - copia.blend', 'camisa-2', 'overol', (0.0379, -0.2013, 1.4328)),
+    ('camisa.manga.larga - copia.blend', 'manga-larga', 'overol', None),
+    ('Chaqueta - copia.blend', 'chaqueta', 'overol', None, (0.0204, 0, 0)),
+    ('Chaqueta.2 - copia.blend', 'chaqueta-2', 'overol', (0.0379, -0.2013, 1.4328)),
+    ('vestido - copia.blend', 'vestido', 'overol', None),
+    ('Jean - copia.blend', 'jean', 'char', None),
+    ('Falda - copia.blend', 'falda', 'char', None),
+    ('Short - copia.blend', 'short', 'char', (0.0102, -1.7545, 1.0246)),
+    ('Overol - copia.blend', 'overol', 'overol', None),
+]
+
+
+def open_garment(spec, M):
+    """Abre una prenda de GARMENTS y la deja alineada al personaje (con M aplicada)."""
+    fname, out, family, fix_loc, *nudge = spec
+    open_blend(fname)
+    meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.visible_get()]
+    for o in meshes:
+        if fix_loc is not None:
+            o.location = fix_loc
+    bpy.context.view_layer.update()
+    delta = OVEROL_TO_CHAR if family == 'overol' else Vector((0, 0, 0))
+    apply_matrix(meshes, Matrix.Translation(Vector(nudge[0] if nudge else (0, 0, 0))) @ M @ Matrix.Translation(delta))
+    return out, meshes
+
+
 def character_frame():
     """Abre el personaje y calcula M: centra entre los pies, apoya en el suelo y escala."""
     open_blend(CHARACTER)
@@ -188,31 +219,9 @@ def main():
     info['head_front_web'] = round(-fmn.y, 4)
 
     # ---------------------------------------------------------------- Prendas
-    # archivo, salida, familia ('char' ya alineada | 'overol' modelada sobre la copia del overol),
-    # ubicación corregida para las copias desplazadas (la de su prenda gemela) y, opcional,
-    # un ajuste fino ya en metros de la página (la chaqueta quedaba 2 cm a la izquierda)
-    GARMENTS = [
-        ('camisa - copia.blend', 'camisa', 'overol', None),
-        ('Camisa.2 - copia.blend', 'camisa-2', 'overol', (0.0379, -0.2013, 1.4328)),
-        ('camisa.manga.larga - copia.blend', 'manga-larga', 'overol', None),
-        ('Chaqueta - copia.blend', 'chaqueta', 'overol', None, (0.0204, 0, 0)),
-        ('Chaqueta.2 - copia.blend', 'chaqueta-2', 'overol', (0.0379, -0.2013, 1.4328)),
-        ('vestido - copia.blend', 'vestido', 'overol', None),
-        ('Jean - copia.blend', 'jean', 'char', None),
-        ('Falda - copia.blend', 'falda', 'char', None),
-        ('Short - copia.blend', 'short', 'char', (0.0102, -1.7545, 1.0246)),
-        ('Overol - copia.blend', 'overol', 'overol', None),
-    ]
     info['garments'] = {}
-    for fname, out, family, fix_loc, *nudge in GARMENTS:
-        open_blend(fname)
-        meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and o.visible_get()]
-        for o in meshes:
-            if fix_loc is not None:
-                o.location = fix_loc
-        bpy.context.view_layer.update()
-        delta = OVEROL_TO_CHAR if family == 'overol' else Vector((0, 0, 0))
-        apply_matrix(meshes, Matrix.Translation(Vector(nudge[0] if nudge else (0, 0, 0))) @ M @ Matrix.Translation(delta))
+    for spec in GARMENTS:
+        out, meshes = open_garment(spec, M)
         bake_roughness(meshes)
         rename_skin(meshes)
         export(meshes, os.path.join(OUT, 'ropa', out + '.glb'))

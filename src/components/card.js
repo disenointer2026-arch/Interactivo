@@ -90,7 +90,7 @@ function template () {
         <h2 class="ready-title">¡Tu tarjeta está lista!</h2>
         <div class="final-actions">
           <button type="button" class="choice-card is-nudging" data-share><strong>Compartir</strong><span>Descárgala o compártela</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
-          <button type="button" class="choice-card" data-finish><strong>Finalizar</strong><span>Volver al inicio</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
+          <button type="button" class="choice-card" data-finish><strong>Finalizar</strong><span>Pedir mi figura</span><i class="choice-card-arrow" aria-hidden="true">${icon('arrowRight')}</i></button>
         </div>
       </div>
       <a class="choice-card choice-card--row" href="#/listo"><strong>Volver a mi avatar</strong><i class="choice-card-arrow" aria-hidden="true">${icon('arrowLeft')}</i></a>
@@ -120,6 +120,7 @@ function reveal () {
     .fromTo(card, { y: -90, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: REDUCED_MOTION ? 0.01 : 0.9, ease: 'back.out(1.3)' }, 0)
     .fromTo($('.card-shine', root), { backgroundPosition: '-150% 0' }, { backgroundPosition: '250% 0', duration: 1.2, ease: 'power2.inOut' }, 0.7)
     .add(() => {
+      if (!root) return // se salió de la pantalla antes de que terminara la animación
       const ready = $('#ready', root)
       ready.hidden = false
       gsap.from(ready, { y: 14, autoAlpha: 0, duration: 0.5, ease: 'back.out(1.6)' })
@@ -268,7 +269,7 @@ function onClick (e) {
     share.classList.remove('is-nudging') // la sacudida solo invita al primer clic
     return openShare()
   }
-  if (e.target.closest('[data-finish]')) { go('/'); toast('¡Gracias por crear con nosotros!', { iconName: 'leaf' }) }
+  if (e.target.closest('[data-finish]')) go('/pedido')
 }
 function onKeys (e) {
   const r = e.target.closest('[role="radio"]')
@@ -291,7 +292,8 @@ export const cardView = {
     el.addEventListener('click', onClick)
     el.addEventListener('keydown', onKeys)
     cleanupTilt = tilt()
-    portrait = await renderAvatar(store.state, { width: 620, height: 620, framing: 'portrait', angle: 0.3 })
+    // Pose relajada como el arte del juego, sin el charm (que va en el suelo, a un lado)
+    portrait = await renderAvatar({ ...store.state, companion: 'none' }, { width: 620, height: 620, framing: 'portrait', angle: 0.3, pose: 'retrato' })
     if (root) await regenerate(true)
   },
   unmount () {

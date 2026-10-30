@@ -35,6 +35,13 @@ function setup () {
   return true
 }
 
+/** Caja real de un objeto: con "precise", las prendas con huesos se miden ya deformadas
+    (si no, la caja sale donde estaría la malla sin el esqueleto) */
+function boxOf (obj) {
+  obj.updateMatrixWorld(true)
+  return new THREE.Box3().setFromObject(obj, true)
+}
+
 function frameBox (box, { angle = 0.35, elevation = 0.12, pad = 1.25 } = {}) {
   const center = box.getCenter(new THREE.Vector3())
   const size = box.getSize(new THREE.Vector3())
@@ -64,15 +71,16 @@ function capture (obj, width, height, frame) {
 
 /** Retrato del avatar completo o del busto. framing: 'full' | 'bust' | 'portrait'
     angle: giro de la cámara alrededor del avatar (0 = de frente); elevation: altura de la mirada. */
-export async function renderAvatar (config, { width = 512, height = 512, framing = 'full', angle, elevation } = {}) {
+export async function renderAvatar (config, { width = 512, height = 512, framing = 'full', angle, elevation, pose } = {}) {
   if (!setup()) return null
   const bust = framing === 'bust'
   angle = angle ?? (bust ? 0.21 : 0.35)
   elevation = elevation ?? (bust ? 0.05 : 0.14)
-  const key = `avatar:${framing}:${width}x${height}:${angle}:${elevation}:${JSON.stringify(config)}`
+  const key = `avatar:${framing}:${width}x${height}:${angle}:${elevation}:${pose}:${JSON.stringify(config)}`
   if (cache.has(key)) return cache.get(key)
   const avatar = new Avatar({ animated: false })
   await avatar.build(config)
+  if (pose) avatar.setPose(pose)
   const d = avatar.dims
   const url = capture(avatar.root, width, height, () => {
     let box
@@ -82,10 +90,10 @@ export async function renderAvatar (config, { width = 512, height = 512, framing
         new THREE.Vector3(d.headR * 1.1, d.headY + d.headR * 1.05, d.headR)
       )
       // Incluye todo el cabello (moños y colas sobresalen por detrás de la cabeza)
-      box.union(new THREE.Box3().setFromObject(avatar.headGroup))
+      box.union(boxOf(avatar.headGroup))
       frameBox(box, { angle, elevation, pad: 1.05 })
     } else {
-      box = new THREE.Box3().setFromObject(avatar.root)
+      box = boxOf(avatar.root)
       frameBox(box, { angle, elevation, pad: framing === 'portrait' ? 1.02 : 1.12 })
     }
   })
@@ -101,7 +109,7 @@ export async function renderPart (slot, option, config, size = 160) {
   if (cache.has(key)) return cache.get(key)
   const dims = computeDims(config.bodyType)
   const obj = await createPart(slot, option, { dims, M: createMaterialKit(config), config })
-  const box = new THREE.Box3().setFromObject(obj)
+  const box = boxOf(obj)
   if (box.isEmpty()) { disposeObject(obj); cache.set(key, null); return null }
   const url = capture(obj, size, size, () => frameBox(box, { angle: 0.45, elevation: 0.2, pad: 1.15 }))
   disposeObject(obj)
