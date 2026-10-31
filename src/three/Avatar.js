@@ -54,27 +54,26 @@ function hairCutUniform (mat) {
 
 const _q = new THREE.Quaternion()
 
+// Charm en el estudio: escala extra, altura a la que flota (metros) y los que no flotan
+const CHARM_SHOWCASE = { scale: 1.3, lift: 0.35, right: 0.14, grounded: ['tulipan'] }
+
 /* Poses para retratos: [nod, tilt] por hueso (nombres sin punto, como quedan en el .glb).
    nod gira alrededor del eje x (negativo = hacia adelante en brazos y piernas, hacia atrás
    en la cabeza); tilt alrededor del eje z (positivo sube el brazo izquierdo, el de la
-   derecha vista de frente). "retrato": de pie y relajada, como el arte del juego: brazos
-   un poco hacia adelante, cabeza ladeada y un pie apenas adelantado (deforma poco la ropa) */
+   derecha vista de frente). Ninguna mueve los brazos: con las mangas dobladas la ropa se
+   deformaba */
 const POSES = {
-  // Al pulsar "Finalizar avatar": saluda doblando solo el antebrazo (el hombro casi no se
-  // mueve, así la ropa no se deforma), ladea la cabeza y da un saltito
+  // Al pulsar "Finalizar avatar": sin mover los brazos (así la ropa no se deforma), ladea
+  // la cabeza mirando un poco hacia arriba, inclina apenas el cuerpo y da un saltito
   celebrar: {
-    cabeza: [-0.1, 0.12],
-    brazoL: [-0.15, 0.15],
-    antebrazoL: [-0.2, 0.95],
-    brazoD: [-0.1, 0.1]
+    torso: [0, -0.04],
+    cabeza: [-0.12, 0.15]
   },
+  // Tarjeta: también sin mover los brazos (las mangas se deformaban); cabeza ladeada y un
+  // pie apenas adelantado
   retrato: {
     torso: [0, -0.03],
     cabeza: [-0.06, 0.1],
-    brazoL: [-0.35, -0.38],
-    antebrazoL: [-0.3, 0.08],
-    brazoD: [-0.35, 0.38],
-    antebrazoD: [-0.3, -0.08],
     musloD: [-0.12, 0],
     piernaD: [0.05, 0],
     MusloL: [0.06, 0]
@@ -171,6 +170,7 @@ export class Avatar {
 
     obj.name = def.slot
     obj.userData.place = option.place
+    obj.userData.optionId = option.id
     this._applyPlace(obj)
     let fromModel = false
     obj.traverse(o => {
@@ -287,6 +287,34 @@ export class Avatar {
     const s = place.scale || 1
     if (Array.isArray(s)) obj.scale.fromArray(s)
     else obj.scale.setScalar(s)
+    if (obj.name === 'companion') this._applyCharmShowcase(obj)
+  }
+
+  /* ---------- Charm en el estudio ----------
+     Solo en la personalización: el charm se ve un poco más grande y flotando detrás del
+     avatar. El tulipán es la excepción: crece igual, pero se queda en el suelo. */
+  setCharmShowcase (on) {
+    this.charmShowcase = on
+    const comp = this.parts.companion
+    if (comp) this._applyPlace(comp)
+  }
+
+  _applyCharmShowcase (obj) {
+    obj.userData.bob = false
+    obj.userData.sway = false
+    obj.userData.baseY = undefined
+    obj.userData.baseTilt = obj.rotation.z // la inclinación propia del charm (guitarra, nota)
+    if (!this.charmShowcase || !obj.userData.place) return
+    obj.scale.multiplyScalar(CHARM_SHOWCASE.scale)
+    obj.position.x += CHARM_SHOWCASE.right
+    if (CHARM_SHOWCASE.grounded.includes(obj.userData.optionId)) {
+      obj.userData.sway = true // el tulipán no flota: se mece desde la base, como con brisa
+      return
+    }
+    const fix = obj.userData.place.showcase || {}
+    obj.position.y += CHARM_SHOWCASE.lift - (fix.down || 0)
+    obj.position.z -= fix.back || 0
+    obj.userData.bob = true
   }
 
   /** Con un sombrero puesto, oculta el pelo que queda por encima de su borde. */
@@ -339,8 +367,12 @@ export class Avatar {
 
     const comp = this.parts.companion
     if (comp && comp.userData.bob) {
+      // Flota subiendo y bajando, con un leve vaivén
       comp.userData.baseY = comp.userData.baseY ?? comp.position.y
-      comp.position.y = comp.userData.baseY + Math.sin(t * 2.4) * 0.015
+      comp.position.y = comp.userData.baseY + Math.sin(t * 1.8) * 0.06
+      comp.rotation.z = (comp.userData.baseTilt || 0) + Math.sin(t * 1.2) * 0.08
+    } else if (comp && comp.userData.sway) {
+      comp.rotation.z = (comp.userData.baseTilt || 0) + Math.sin(t * 1.5) * 0.09
     }
   }
 

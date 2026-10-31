@@ -170,6 +170,44 @@ function addGrassPattern (mat) {
   mat.needsUpdate = true
 }
 
+/** Sombra suave de contacto bajo un objeto que toca el suelo (degradado radial oscuro). */
+function contactShadow (obj, { spread = 1.45, opacity = 0.55, base: baseHeight = 0.12 } = {}) {
+  obj.updateMatrixWorld(true)
+  // Solo la base: los vértices más bajos marcan dónde toca el suelo
+  const pos = obj.geometry.attributes.position
+  const v = new THREE.Vector3()
+  const pts = []
+  for (let i = 0; i < pos.count; i++) pts.push(v.fromBufferAttribute(pos, i).applyMatrix4(obj.matrixWorld).clone())
+  const minY = Math.min(...pts.map(p => p.y))
+  // base: altura (m) desde el punto más bajo que cuenta como "apoyo"
+  const base = new THREE.Box3().setFromPoints(pts.filter(p => p.y < minY + baseHeight))
+  const center = base.getCenter(new THREE.Vector3())
+  const size = base.getSize(new THREE.Vector3())
+
+  const c = document.createElement('canvas')
+  c.width = c.height = 128
+  const g = c.getContext('2d')
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64)
+  // Oscura hasta el borde de las raíces (la mitad queda bajo el tronco) y se desvanece fuera
+  grad.addColorStop(0, 'rgba(40, 52, 20, 1)')
+  grad.addColorStop(0.62, 'rgba(40, 52, 20, 0.85)')
+  grad.addColorStop(1, 'rgba(40, 52, 20, 0)')
+  g.fillStyle = grad
+  g.fillRect(0, 0, 128, 128)
+  const tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(size.x * spread, size.z * spread),
+    new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity, depthWrite: false })
+  )
+  shadow.rotation.x = -Math.PI / 2
+  shadow.position.set(center.x, 0.006, center.z) // apenas sobre el pasto (y ≈ 0)
+  shadow.renderOrder = 1
+  shadow.name = 'sombra-contacto'
+  return shadow
+}
+
 export function createEnvironment () {
   const root = new THREE.Group()
   root.name = 'environment'
@@ -205,6 +243,14 @@ export function createEnvironment () {
         if (/^suelo/i.test(o.name)) addGrassPattern(o.material)
       })
       root.add(gltf.scene)
+      // El tronco ("Círculo") apoya en el suelo, pero el sol le da de frente y su sombra cae
+      // detrás: sin una sombra en la base parecía flotar
+      const trunk = gltf.scene.getObjectByName('Círculo')
+      if (trunk) root.add(contactShadow(trunk))
+      // Arbustos (esferas apoyadas en el pasto): la misma sombra, medida en su parte baja
+      gltf.scene.traverse(o => {
+        if (o.isMesh && /^Esfera0\d\d/.test(o.name)) root.add(contactShadow(o, { base: 0.25, spread: 1.45 }))
+      })
     }).catch(err => {
       console.warn(`[ambiente] No se pudo cargar ${SCENE.islandModel}. Se usa la isla procedural.`, err)
       root.add(floor, plants, decorations)

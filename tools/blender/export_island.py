@@ -19,6 +19,11 @@ TREE = ('Esfera', 'Círculo')  # copa y tronco
 # La copa tiene ramas bajas a la altura de la cabeza: el árbol se aleja hacia atrás
 # (metros de la página) para que peinados y accesorios no se metan entre las hojas
 TREE_BACK = 0.5
+# Hacia el centro (a la derecha vista de frente) para que la base del tronco no quede fuera
+# del borde de la isla después de alejarlo
+TREE_SIDE = 0.0
+# Hundido en el suelo (metros): con las raíces algo enterradas el árbol no parece flotar
+TREE_SINK = 0.05
 
 
 def center_xy(objs):
@@ -37,7 +42,7 @@ def shrink_ground(meshes, scale):
         c = center_xy(objs)
         base.apply_matrix(objs, Matrix.Translation(c * (f - 1)))
     # Atrás es +Y en Blender (el personaje mira hacia -Y)
-    base.apply_matrix(tree, Matrix.Translation(Vector((0, TREE_BACK / scale, 0))))
+    base.apply_matrix(tree, Matrix.Translation(Vector((TREE_SIDE / scale, TREE_BACK / scale, -TREE_SINK / scale))))
 
 
 def main():

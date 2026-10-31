@@ -79,6 +79,10 @@ export const EYE_COLORS = [
 /* Los llaveros quedan en el suelo, detrás del personaje y un poco a su izquierda
    (a la derecha vista de frente), girados hacia la cámara. Se aplica en Avatar.js. */
 const KEYCHAIN_SPOT = { position: [0.46, 0, -0.34], rotation: [0, -0.45, 0] }
+/** Lugar del charm con ajustes propios: tilt = inclinación en diagonal hacia la derecha
+    (radianes), scale = tamaño relativo, showcase = corrección solo en la personalización
+    (back/down en metros: más atrás y más abajo, para que la mano no los tape ni los toque) */
+const charmSpot = ({ tilt = 0, scale = 1, showcase } = {}) => ({ ...KEYCHAIN_SPOT, rotation: [0, -0.45, -tilt], scale, showcase })
 /* La balaca, el moño y la flor se modelaron sobre la cabeza sin cabello: se agrandan
    un poco desde el centro de la cabeza para que queden por encima del peinado.
    La balaca crece solo hacia arriba y se estrecha un poco (x, y, z): el modelo es más
@@ -255,11 +259,11 @@ export const CATEGORIES = [
         key: 'companion', label: 'Charm', type: 'options', thumb: 'part',
         options: [
           { id: 'none', name: 'Nada' },
-          { id: 'bolsa-dinero', name: 'Bolsa de dinero', model: 'models/avatar/llaveros/bolsa-dinero.glb', place: KEYCHAIN_SPOT },
-          { id: 'guitarra', name: 'Guitarra', model: 'models/avatar/llaveros/guitarra.glb', place: KEYCHAIN_SPOT },
+          { id: 'bolsa-dinero', name: 'Bolsa de dinero', model: 'models/avatar/llaveros/bolsa-dinero.glb', place: charmSpot({ scale: 1.2, showcase: { back: 0.25, down: 0.1 } }) },
+          { id: 'guitarra', name: 'Guitarra', model: 'models/avatar/llaveros/guitarra.glb', place: charmSpot({ tilt: 0.35, showcase: { down: 0.15 } }) },
           { id: 'moneda', name: 'Moneda', model: 'models/avatar/llaveros/moneda.glb', place: KEYCHAIN_SPOT },
-          { id: 'nota-musical', name: 'Nota musical', model: 'models/avatar/llaveros/nota-musical.glb', place: KEYCHAIN_SPOT },
-          { id: 'regalo', name: 'Regalo', model: 'models/avatar/llaveros/regalo.glb', place: KEYCHAIN_SPOT },
+          { id: 'nota-musical', name: 'Nota musical', model: 'models/avatar/llaveros/nota-musical.glb', place: charmSpot({ tilt: 0.35, scale: 1.2, showcase: { down: 0.15 } }) },
+          { id: 'regalo', name: 'Regalo', model: 'models/avatar/llaveros/regalo.glb', place: charmSpot({ scale: 1.2, showcase: { back: 0.25, down: 0.1 } }) },
           { id: 'tulipan', name: 'Tulipán', model: 'models/avatar/llaveros/tulipan.glb', place: KEYCHAIN_SPOT }
         ]
       }

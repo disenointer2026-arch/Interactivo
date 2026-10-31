@@ -371,6 +371,7 @@ export const customizerView = {
     if (stage && el.isConnected) {
       await stage.avatar.apply(store.state)
       stage.attach(mount, 'edit')
+      stage.avatar.setCharmShowcase(true) // charm más grande y flotando, solo aquí
       $('.stage-loading', mount)?.remove()
       const cat = CATEGORIES.find(c => c.id === activeCat)
       stage.focus(cat.camera || 'full', 1.4)
@@ -384,7 +385,10 @@ export const customizerView = {
     clearTimeout(leafTimer)
     unsubscribe && unsubscribe()
     window.removeEventListener('keydown', keyHandler)
-    stage && stage.detach()
+    if (stage) {
+      stage.avatar.setCharmShowcase(false)
+      stage.detach()
+    }
     root = null
   }
 }
