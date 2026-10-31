@@ -63,9 +63,11 @@ export function skyTexture () {
   return sky
 }
 
-/* Aspecto plástico del avatar: ajusta estos dos valores para más o menos brillo.
-   roughness solo se aplica a los modelos (su rugosidad horneada es casi toda mate). */
-export const PLASTIC = { roughness: 0.6, env: 0.5 }
+/* Aspecto plástico de todos los modelos (avatar, charms e isla), en PartLoader.applyPlastic.
+   env: intensidad del reflejo del cielo; scratches: relieve de los rayones del equipo;
+   roughness: multiplica el mapa de rugosidad del equipo (0,7–1): con 0,72 queda entre
+   0,5 y 0,72, un brillo leve de plástico. Más bajo = más brillante. */
+export const PLASTIC = { env: 0.65, scratches: 0.8, roughness: 0.72 }
 
 /** Kit de materiales para los constructores de piezas. */
 export function createMaterialKit (config) {

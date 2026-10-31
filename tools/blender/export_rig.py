@@ -1,10 +1,15 @@
-# Exporta el cuerpo con huesos (zip "Avatar-huesos") y la ropa preparada para doblarse con él.
+# Exporta el cuerpo con huesos y las texturas de piel del equipo (zip "ScratchesLight001",
+# archivo Personaje.para.pagina.principal.blend) y la ropa preparada para doblarse con él.
 # Uso (Blender 3.6, sin interfaz):
 #   blender -b --disable-autoexec --python export_rig.py -- <carpeta_personaje> <carpeta_rig> <carpeta_extras> <carpeta_salida>
 #
 # - cuerpo.glb: torso, brazos y piernas con el esqueleto "Esqueleto" (malla con piel/skin).
-#   La cabeza sigue en cabeza.glb (export_models.py): en la página se engancha al hueso
-#   "cabeza", porque sus pesos están casi enteros en ese hueso.
+#   La piel del cuerpo lleva el normal map de rayones (reducido a NORMAL_SIZE).
+# - cabeza.glb: cabeza y orejas, origen en el centro de la cabeza, con la rugosidad de la
+#   textura de imperfecciones horneada. En la página se engancha al hueso "cabeza".
+# Las texturas del .blend apuntan a ../ScratchesLight001 y ../imperfection_0002_2k_wvEb3Q:
+# el .blend debe estar en una subcarpeta junto a esas carpetas.
+# La cadena y la base del archivo no se exportan (se usarán más adelante).
 # - zapatos/*.glb: igual que la ropa, con los pesos de las piernas (siguen a los pies).
 # - ropa/*.glb: cada prenda recibe los pesos del cuerpo (transferencia por cercanía) y se
 #   exporta con una copia del esqueleto. En la página se une al esqueleto del cuerpo.
@@ -16,7 +21,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import export_models as base  # noqa: E402
 import export_extras as extras  # noqa: E402
 
-RIG_FILE = 'AnimalCrossingCharacter.blend'
+RIG_FILE = 'Personaje.para.pagina.principal.blend'
+# Materiales de piel del archivo: se renombran a "skin" para que tomen el tono elegido
+SKIN_MATERIALS = ('cabeza', 'cuerpo', 'piel', 'skin')
+NORMAL_SIZE = 1024
 # Pesos: el torso (de la malla y de las prendas) tiene algo de peso en los huesos del brazo
 # y al subir un brazo se deformaba. Entre ARM_RAMP (|x| en metros de la página, ya con M)
 # el peso del brazo pasa al hueso torso: dentro del torso 0 %, en la manga 100 %.
@@ -140,6 +148,65 @@ def relax_weights(obj, arms=True, legs=False):
             torso.add([v.index], moved, 'ADD')
 
 
+def rename_skin(objs):
+    for o in objs:
+        for slot in o.material_slots:
+            if slot.material and slot.material.name.lower().startswith(SKIN_MATERIALS):
+                slot.material.name = 'skin'
+
+
+def drop_alpha(objs):
+    """La piel de la cabeza conecta un JPG (sin transparencia) al Alpha: no hace nada en
+    Blender, pero el exportador lo convertía en una textura de color de 3 MB."""
+    for o in objs:
+        for slot in o.material_slots:
+            m = slot.material
+            if not (m and m.use_nodes):
+                continue
+            for n in m.node_tree.nodes:
+                if n.type == 'BSDF_PRINCIPLED':
+                    for l in list(n.inputs['Alpha'].links):
+                        m.node_tree.links.remove(l)
+                    n.inputs['Alpha'].default_value = 1
+
+
+def shrink_normal_maps(objs):
+    """Los normal maps vienen a 2K: a NORMAL_SIZE pesan mucho menos en la página."""
+    for o in objs:
+        for slot in o.material_slots:
+            m = slot.material
+            if not (m and m.use_nodes):
+                continue
+            for n in m.node_tree.nodes:
+                if n.type == 'NORMAL_MAP' and n.inputs['Color'].is_linked:
+                    tex = n.inputs['Color'].links[0].from_node
+                    img = getattr(tex, 'image', None)
+                    if img and img.size[0] > NORMAL_SIZE:
+                        img.scale(NORMAL_SIZE, NORMAL_SIZE)
+
+
+def export_head(out_dir):
+    """Cabeza y orejas sin esqueleto (la página las cuelga del hueso), centradas en la cabeza."""
+    head = [bpy.data.objects['cabeza'], bpy.data.objects['orejas']]
+    for o in head:
+        world = o.matrix_world.copy()
+        o.parent = None
+        o.matrix_world = world
+        for m in list(o.modifiers):
+            o.modifiers.remove(m)
+    bpy.context.view_layer.update()
+    drop_alpha(head)
+    base.bake_roughness(head)
+    rename_skin(head)
+    # Primero se aplican las transformaciones: con la malla girada, la caja (y su centro)
+    # saldrían más grandes que la cabeza real
+    base.apply_matrix(head, Matrix.Identity(4))
+    hmn, hmx = base.world_bbox([head[0]])
+    print('HEAD_CENTER', [round(v, 4) for v in (hmn + hmx) / 2])
+    base.apply_matrix(head, Matrix.Translation(-(hmn + hmx) / 2))
+    base.export(head, os.path.join(out_dir, 'cabeza.glb'))
+
+
 def main():
     args = sys.argv[sys.argv.index('--') + 1:]
     char_dir, rig_dir, extras_dir, out_dir = args[0], args[1], args[2], args[3]
@@ -157,10 +224,13 @@ def main():
     body = [bpy.data.objects[n] for n in BODY]
     place_rig(arm, M)
     relax_weights(bpy.data.objects['torso'])
+    drop_alpha(body)
     base.bake_roughness(body)
-    base.rename_skin(body)
+    shrink_normal_maps(body)
+    rename_skin(body)
     export_skinned([arm] + body, os.path.join(out_dir, 'cuerpo.glb'))
     bones = [b.name for b in arm.data.bones]
+    export_head(out_dir)
 
     # ------------------------------------------------------------ Ropa
     base.SRC = char_dir

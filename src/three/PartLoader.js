@@ -13,15 +13,43 @@ import { BASE_MODELS } from '../data/avatarOptions.js'
 const loader = new GLTFLoader()
 const cache = new Map()
 
+/* Texturas de plástico del equipo (static/textures/plastico, tools/blender/prepare_plastic_maps.py):
+   rugosidad de imperfecciones (mate con brillos irregulares) y normal map de rayones finos */
+const texLoader = new THREE.TextureLoader()
+let plasticMaps = null
+function plasticTextures () {
+  if (plasticMaps) return plasticMaps
+  const load = url => {
+    const t = texLoader.load(url)
+    t.flipY = false // mismas UV que las texturas de los .glb
+    t.wrapS = t.wrapT = THREE.RepeatWrapping
+    t.colorSpace = THREE.NoColorSpace // datos, no color
+    return t
+  }
+  plasticMaps = { roughness: load('textures/plastico/rugosidad.jpg'), normal: load('textures/plastico/rayones.jpg') }
+  return plasticMaps
+}
+
+export function applyPlastic (mat) {
+  const maps = plasticTextures()
+  mat.envMap = skyTexture()
+  mat.envMapIntensity = PLASTIC.env
+  mat.roughnessMap = maps.roughness
+  mat.metalness = 0
+  mat.roughness = PLASTIC.roughness // multiplica el mapa del equipo (0,7–1)
+  mat.normalMap = maps.normal
+  mat.normalScale.set(PLASTIC.scratches, PLASTIC.scratches)
+  mat.needsUpdate = true
+}
+
 function loadGLTF (url) {
   return loader.loadAsync(url).then(gltf => {
     gltf.scene.traverse(o => {
       if (!o.isMesh || !o.material) return
-      o.material.envMap = skyTexture()
-      o.material.envMapIntensity = PLASTIC.env
-      // La rugosidad horneada es casi toda 1 (mate): este factor deja un brillo
-      // suave en toda la pieza y los puntitos quedan como destellos
-      if (o.material.roughnessMap) o.material.roughness = PLASTIC.roughness
+      // Acabado de figura de plástico en todas las piezas, piel incluida: las texturas del
+      // equipo. (La rugosidad horneada de la piel salía mucho más brillante que el resto:
+      // la mano casi a 0,44 y manchas de reflejo del cielo en las zonas de sombra)
+      applyPlastic(o.material)
     })
     return gltf
   })

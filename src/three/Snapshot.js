@@ -4,6 +4,7 @@ import { computeDims } from './avatarDims.js'
 import { createMaterialKit } from './materials.js'
 import { createPart, disposeObject } from './PartLoader.js'
 import { webglAvailable } from './Stage.js'
+import { SCENE } from '../data/sceneConfig.js'
 
 /* ==========================================================================
    SNAPSHOT: un segundo renderer pequeño que genera imágenes (PNG):
@@ -24,11 +25,13 @@ function setup () {
   renderer.setPixelRatio(1)
   renderer.setClearColor(0x000000, 0)
   scene = new THREE.Scene()
-  scene.add(new THREE.HemisphereLight('#FFF4E0', '#C9D9B8', 1.8))
-  const key = new THREE.DirectionalLight('#FFE6C2', 2.2)
+  // Mismos colores que el escenario (cálidos), con intensidades propias para los retratos
+  const L = SCENE.lights
+  scene.add(new THREE.HemisphereLight(L.sky, L.ground, 1.8))
+  const key = new THREE.DirectionalLight(L.key, 2.2)
   key.position.set(2, 4, 5)
   scene.add(key)
-  const rim = new THREE.DirectionalLight('#D6E9FF', 0.8)
+  const rim = new THREE.DirectionalLight(L.fill, 0.8)
   rim.position.set(-3, 2, -3)
   scene.add(rim)
   camera = new THREE.PerspectiveCamera(26, 1, 0.05, 50)

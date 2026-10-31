@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { SCENE } from '../data/sceneConfig.js'
+import { applyPlastic } from './PartLoader.js'
 import { mesh, group, leafShape } from './parts/helpers.js'
 
 /* ==========================================================================
@@ -136,6 +137,39 @@ function fallingLeaves () {
   }
 }
 
+/* Pasto de la isla: el patrón de triángulos (static/images/Pasto.png) se repite sobre la
+   superficie de arriba, proyectado desde arriba (en metros del mundo), así no se estira con
+   las UV. Se elige por altura (la cara de arriba está a y ≈ 0; las normales del modelo no
+   sirven para esto): los costados de tierra, más abajo, conservan su textura. */
+// tile: metros que ocupa una repetición; opacity: cuánto se ve el patrón sobre el verde de la isla
+const GRASS = { url: 'images/Pasto.png', tile: 3.2, opacity: 0.4 }
+let grassTexture = null
+
+function addGrassPattern (mat) {
+  if (!grassTexture) {
+    grassTexture = new THREE.TextureLoader().load(GRASS.url)
+    grassTexture.colorSpace = THREE.SRGBColorSpace
+    grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping
+    grassTexture.anisotropy = 4
+  }
+  mat.onBeforeCompile = shader => {
+    shader.uniforms.grassMap = { value: grassTexture }
+    shader.uniforms.grassOpacity = { value: GRASS.opacity }
+    // El patrón es más ancho que alto (1200 × 900): se respeta su proporción
+    shader.uniforms.grassScale = { value: new THREE.Vector2(1 / GRASS.tile, 1200 / 900 / GRASS.tile) }
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vGrassPos;')
+      .replace('#include <worldpos_vertex>', `#include <worldpos_vertex>
+        vGrassPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`)
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D grassMap;\nuniform vec2 grassScale;\nuniform float grassOpacity;\nvarying vec3 vGrassPos;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        vec3 grass = texture2D(grassMap, vGrassPos.xz * grassScale).rgb;
+        diffuseColor.rgb = mix(diffuseColor.rgb, grass, smoothstep(-0.14, -0.05, vGrassPos.y) * grassOpacity);`)
+  }
+  mat.needsUpdate = true
+}
+
 export function createEnvironment () {
   const root = new THREE.Group()
   root.name = 'environment'
@@ -166,9 +200,9 @@ export function createEnvironment () {
         // se sombrea a sí mismo y aparecen franjas en forma de anillos ("shadow acne")
         o.castShadow = !/^(suelo|cesped)/i.test(o.name)
         o.receiveShadow = true
-        // Mate: sin el reflejo de luz que dejaba el sol sobre el pasto
-        o.material.roughness = 1
-        o.material.metalness = 0
+        // Mismo acabado de plástico que el avatar: la isla también es parte del producto
+        applyPlastic(o.material)
+        if (/^suelo/i.test(o.name)) addGrassPattern(o.material)
       })
       root.add(gltf.scene)
     }).catch(err => {

@@ -30,13 +30,14 @@ export const SCENE = {
     flowers: ['#F6D365', '#F2A7B8', '#FFFFFF', '#E86A5C']
   },
 
+  // Las tres luces con un leve tono cálido (también las usan los retratos de Snapshot.js)
   lights: {
-    sky: '#FFF4E0',
-    ground: '#A9C98D',
+    sky: '#FFF1DC', // hemisférica, arriba: crema
+    ground: '#C8C08F', // hemisférica, abajo: rebote del pasto, más cálido que verde
     hemiIntensity: 1.5,
-    key: '#FFE6C2',
+    key: '#FFE0BA', // sol: durazno
     keyIntensity: 2.4,
-    fill: '#D6E9FF',
+    fill: '#FFE9D2', // contraluz: antes azul frío, ahora melocotón muy claro
     fillIntensity: 0.7
   },
 

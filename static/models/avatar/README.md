@@ -9,9 +9,14 @@ Exportados desde `Modelos.Interactivo` con `tools/blender/export_models.py`
 - `cabeza.glb`: cabeza y orejas. Origen en el centro de la cabeza.
 - `ropa/*.glb`: prendas, alineadas al cuerpo (origen en el suelo).
 
-Con huesos (zip "Avatar-huesos"), con `tools/blender/export_rig.py`:
+Con huesos y las texturas de piel del equipo (zip "ScratchesLight001"), con
+`tools/blender/export_rig.py`. El .blend (`Personaje.para.pagina.principal.blend`) debe
+estar en una subcarpeta junto a `ScratchesLight001/` e `imperfection_0002_2k_wvEb3Q/`:
 
-    blender -b --disable-autoexec --python tools/blender/export_rig.py -- <carpeta del personaje> <carpeta con AnimalCrossingCharacter.blend> static/models/avatar
+    blender -b --disable-autoexec --python tools/blender/export_rig.py -- <carpeta del personaje> <subcarpeta con el .blend> <carpeta de extras> static/models/avatar
+
+Exporta `cuerpo.glb` (normal map de rayones), `cabeza.glb` (rugosidad de imperfecciones),
+la ropa y los zapatos con huesos. La cadena y la base del archivo no se exportan.
 
 - `cuerpo.glb` lleva el esqueleto "Esqueleto"; la cabeza (con pelo, ojos y accesorios)
   se engancha en la página al hueso `cabeza`.

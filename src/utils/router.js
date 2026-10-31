@@ -63,7 +63,11 @@ async function swap () {
     await gsap.to(outlet, { autoAlpha: 0, y: 8, duration: 0.22, ease: 'power1.in' })
     current.unmount && current.unmount()
   }
-  outlet.innerHTML = ''
+  // Contenedor nuevo para cada pantalla: las pantallas escuchan clics en él y, si se
+  // reutilizara, sus manejadores seguirían activos (y se acumularían) en las demás
+  const fresh = outlet.cloneNode(false)
+  outlet.replaceWith(fresh)
+  outlet = fresh
   window.scrollTo(0, 0)
   current = view
   await view.mount(outlet, param)
