@@ -19,6 +19,7 @@ const P = {
   download: '<path d="M12 4v11m-5-5 5 5 5-5"/><path d="M5 20h14"/>',
   arrowLeft: '<path d="M19 12H5m6-6-6 6 6 6"/>',
   arrowUp: '<path d="M12 20V6m-6 6 6-6 6 6"/>',
+  arrowDown: '<path d="M12 4v14m-6-6 6 6 6-6"/>',
   arrowRight: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
   menu: '<path d="M4 7h16M4 12h16M4 17h10"/>',
   dice: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h.01M15 9h.01M9 15h.01M15 15h.01M12 12h.01"/>',
@@ -47,23 +48,27 @@ export function icon (name, cls = '') {
   return `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name] || ''}</svg>`
 }
 
-/* Seto frondoso de hojas con manzanas (estilo Animal Crossing).
+/* Fila de arbustos, copiando los de la isla 3D: mogotes redondos cubiertos de
+   hojitas, claras en la coronilla y en sombra hacia abajo.
    Es un patrón SVG que se repite solo, así que sirve a cualquier ancho.
-   Ajustes rápidos: TILE (ancho del patrón), FOLIAGE_H (alto del seto),
-   LEAF_COUNT (cuántas hojas por repetición) y APPLES (cuántas manzanas y dónde). */
-const TILE = 480
-export const FOLIAGE_H = 118
-/** Dónde empieza la masa verde: por encima solo asoman hojas sueltas. */
-export const SPROUT_H = 28
-const LEAF_COUNT = 330
-const SPROUT_COUNT = 52
-const APPLE_COUNT = 3
-const GREENS = ['#2E7231', '#38853A', '#458F3F', '#4E9E46', '#5BAC4F', '#69B95A']
-const APPLE_REDS = ['#E42A32', '#D21F28', '#EB3A40']
+   Ajustes rápidos: TILE (ancho del patrón), HEDGE_H (alto de la fila),
+   MOUNDS (cuántos arbustos por repetición, dónde y de qué tamaño). */
+const TILE = 560
+export const HEDGE_H = 150
+/** Alto de la masa verde continua al pie de la fila (no deja huecos). */
+const SKIRT_H = 30
+/* De la textura "Hoja.UV" de la isla: del verde en sombra al de la coronilla. */
+const GREENS = ['#36772F', '#3F8A36', '#4A9B3E', '#56AC47', '#63BE51', '#74CE5F']
+const MOUNDS = [
+  { cx: 62, rx: 104, ry: 92 },
+  { cx: 232, rx: 88, ry: 112 },
+  { cx: 388, rx: 98, ry: 80 },
+  { cx: 520, rx: 92, ry: 102 }
+]
 
-export function foliage (id) {
+export function bushRow (id) {
   /* Generador determinista: el seto se ve siempre igual, pero desordenado. */
-  let seed = 20260408
+  let seed = 20261031
   const rand = () => {
     seed = (seed * 1664525 + 1013904223) % 4294967296
     return seed / 4294967296
@@ -71,72 +76,61 @@ export function foliage (id) {
 
   const put = (list, l) => {
     list.push(l)
-    if (l.x < 30) list.push({ ...l, x: l.x + TILE })        // copia para que
-    if (l.x > TILE - 30) list.push({ ...l, x: l.x - TILE }) // el patrón calce
+    if (l.x < 40) list.push({ ...l, x: l.x + TILE })        // copia para que
+    if (l.x > TILE - 40) list.push({ ...l, x: l.x - TILE }) // el patrón calce
   }
 
-  /* Hojas sueltas que asoman por encima de la masa: rompen la línea recta del borde.
-     Nacen bastante abajo para que la punta nunca llegue al tope del patrón (si lo
-     cruzara, el patrón la cortaría en recto y volvería a verse la línea). */
-  const sprouts = []
-  for (let i = 0; i < SPROUT_COUNT; i++) {
-    put(sprouts, {
-      x: rand() * TILE,
-      y: SPROUT_H - 2 + rand() * 14,
-      rot: -150 + rand() * 120,
-      scale: 0.72 + rand() * 0.3,
-      fill: GREENS[2 + Math.floor(rand() * 3)]
-    })
-  }
-
+  /* Cada mogote se hunde un poco bajo el borde inferior: así se ve plantado y
+     no flotando sobre la línea. */
+  const baseY = HEDGE_H + 14
   const leaves = []
-  for (let i = 0; i < LEAF_COUNT; i++) {
-    const depth = Math.pow(rand(), 1.25)       // 0 = al fondo y arriba, 1 = al frente y abajo
-    put(leaves, {
-      x: rand() * TILE,
-      y: SPROUT_H + 2 + depth * 56,
-      rot: -80 + rand() * 160,
-      scale: 0.7 + rand() * 0.65,
-      fill: GREENS[Math.min(GREENS.length - 1, Math.floor(depth * 4 + rand() * 2))]
-    })
-  }
-  leaves.sort((a, b) => a.y - b.y)
+  MOUNDS.forEach(m => {
+    const count = Math.round(m.rx * m.ry / 56)
+    for (let i = 0; i < count; i++) {
+      /* Punto al azar dentro de la media superior de la elipse: primero a lo
+         ancho y luego hasta donde llegue la cúpula en esa columna. */
+      const t = rand() * 2 - 1
+      const dome = Math.sqrt(Math.max(0, 1 - t * t))
+      const lift = dome * Math.pow(rand(), 0.7)             // 0 abajo, 1 en la coronilla
+      put(leaves, {
+        x: m.cx + t * m.rx,
+        y: baseY - lift * m.ry,
+        rot: -120 + rand() * 240,
+        scale: 1 + rand() * 0.9,
+        fill: GREENS[Math.min(GREENS.length - 1, Math.floor(lift * 4 + rand() * 2.2))]
+      })
+    }
+  })
+  leaves.sort((a, b) => a.y - b.y)   // las de abajo se pintan encima
 
-  const draw = list => list.map(l =>
+  const domes = MOUNDS.map(m =>
+    `<ellipse cx="${m.cx}" cy="${baseY}" rx="${m.rx}" ry="${m.ry}" fill="${GREENS[1]}"/>`).join('')
+  const sprigs = leaves.map(l =>
     `<use href="#lf-${id}" transform="translate(${l.x.toFixed(1)} ${l.y.toFixed(1)}) rotate(${l.rot.toFixed(0)}) scale(${l.scale.toFixed(2)})" fill="${l.fill}"/>`
   ).join('')
 
-  /* Manzanas repartidas al azar dentro de la repetición */
-  const apples = []
-  for (let i = 0; i < APPLE_COUNT; i++) {
-    const r = 8.5 + rand() * 2.5
-    apples.push({
-      x: 20 + rand() * (TILE - 40),
-      y: SPROUT_H + 54 + rand() * 24,
-      r,
-      stem: 8 + rand() * 8,
-      color: APPLE_REDS[Math.floor(rand() * APPLE_REDS.length)]
-    })
-  }
-  const fruit = apples.map(a => `
-    <path d="M${a.x.toFixed(1)} ${(a.y - a.r - a.stem).toFixed(1)}v${a.stem.toFixed(1)}" stroke="#7A4A2A" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="${a.x.toFixed(1)}" cy="${a.y.toFixed(1)}" r="${a.r.toFixed(1)}" fill="${a.color}"/>
-    <circle cx="${(a.x - a.r * 0.36).toFixed(1)}" cy="${(a.y - a.r * 0.36).toFixed(1)}" r="${(a.r * 0.28).toFixed(1)}" fill="#FFFFFF" opacity=".45"/>`).join('')
-
-  return `<svg class="edge-svg" width="100%" height="${FOLIAGE_H}" aria-hidden="true" focusable="false">
+  return `<svg class="edge-svg" width="100%" height="${HEDGE_H}" aria-hidden="true" focusable="false">
     <defs>
       <path id="lf-${id}" d="M0 0c3-6 12-9 19-5 2 6-3 13-10 14-5 1-9-4-9-9z"/>
-      <pattern id="${id}" width="${TILE}" height="${FOLIAGE_H}" patternUnits="userSpaceOnUse">
-        ${draw(sprouts)}
-        <g fill="#2E7231">
-          <rect y="${SPROUT_H}" width="${TILE}" height="26"/>
-          ${Array.from({ length: TILE / 32 + 1 }, (_, i) => `<circle cx="${i * 32}" cy="${SPROUT_H + 26 + (i % 2 ? 2 : 0)}" r="20"/>`).join('')}
-        </g>
-        ${draw(leaves)}
-        ${fruit}
+      <pattern id="${id}" width="${TILE}" height="${HEDGE_H}" patternUnits="userSpaceOnUse">
+        <rect y="${HEDGE_H - SKIRT_H}" width="${TILE}" height="${SKIRT_H}" fill="${GREENS[0]}"/>
+        ${domes}
+        ${sprigs}
       </pattern>
     </defs>
-    <rect width="100%" height="${FOLIAGE_H}" fill="url(#${id})"/>
+    <rect width="100%" height="${HEDGE_H}" fill="url(#${id})"/>
+  </svg>`
+}
+
+/** Carita guiñando de MINISO, redibujada para poder teñirla y escalarla
+    (el PNG original viene con fondo blanco y no sirve de marca de agua). */
+export function minisoFace (cls = '') {
+  /* El viewBox va ajustado al trazo (sin aire alrededor) para poder alinearla
+     por su borde inferior: la sonrisa acaba justo donde acaba la caja. */
+  return `<svg class="${cls}" viewBox="82 106 270 247" aria-hidden="true" focusable="false" fill="none">
+    <circle cx="133" cy="135" r="27" fill="currentColor"/>
+    <rect x="232" y="117" width="116" height="36" rx="8" fill="currentColor"/>
+    <path d="M103 218a114 114 0 0 0 228 0" stroke="currentColor" stroke-width="38" stroke-linecap="round"/>
   </svg>`
 }
 

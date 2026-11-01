@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import gsap from 'gsap'
-import { Avatar } from './Avatar.js'
+import { Avatar, idleBob } from './Avatar.js'
 import { createEnvironment } from './Environment.js'
+import { createHeroProps } from './HeroProps.js'
 import { SCENE } from '../data/sceneConfig.js'
 
 /* ==========================================================================
@@ -12,6 +13,23 @@ import { SCENE } from '../data/sceneConfig.js'
    ========================================================================== */
 
 const CAM = SCENE.camera
+
+/* Portada: el personaje sobre su base de acrílico, de frente.
+   fill   cuánto de la altura ocupa el personaje con su base (1 = borde a borde;
+          se deja aire de sobra para que la base nunca quede cortada)
+   fillX  deja aire a los lados para que no se corten los brazos
+          (en pantallas verticales se aprovecha casi todo el ancho)
+   drop   cuánto baja el personaje respecto al centro (negativo = sube) */
+const HERO = { fill: 0.91, fillX: 0.78, fillXNarrow: 0.9, drop: -0.085 }
+
+/* Entrada de la portada: el personaje crece desde la base girando deprisa y
+   acaba de frente; solo entonces arranca el giro lento. */
+const INTRO = { duration: 1.5, turns: 2.25, settle: 2400 }
+
+/* Giro de la portada: el personaje se queda de frente y, de vez en cuando
+   (lo dispara home.js con heroSpin), da una vuelta completa suave, como la del
+   video de referencia, y vuelve a quedar de frente. */
+const SPIN = { duration: 1.9, ease: 'power2.inOut' }
 
 export class Stage {
   constructor () {
@@ -52,11 +70,35 @@ export class Stage {
     this.avatar = new Avatar({ animated: true })
     this.scene.add(this.avatar.root)
 
+    /* Soporte de la portada (base de acrílico + llavero): se carga la primera
+       vez que se entra en modo "hero" y sustituye a la isla. */
+    this.heroProps = null
+    this._heroLoading = null
+
     this.clock = new THREE.Clock()
     this.container = null
     this.mode = 'edit'
     this.tick = this.tick.bind(this)
     this.resizeObserver = new ResizeObserver(() => this.resize())
+
+    /* En la portada el personaje mira de frente; si alguien lo gira a mano,
+       unos segundos después de soltar vuelve al frente. */
+    this._resume = null
+    this._dragging = false
+    this.controls.addEventListener('start', () => {
+      if (this.mode !== 'hero') return
+      clearTimeout(this._resume)
+      this._stopSnap()
+      this._dragging = true
+    })
+    this.controls.addEventListener('end', () => {
+      if (this.mode !== 'hero') return
+      clearTimeout(this._resume)
+      this._resume = setTimeout(() => {
+        this._dragging = false
+        if (this.mode === 'hero') this._orbit(0, 0.9, 'power2.inOut')
+      }, 1800)
+    })
   }
 
   async init (config) {
@@ -113,16 +155,184 @@ export class Stage {
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
+    if (this.mode === 'hero') this.fitHero()
+  }
+
+  /** Portada: encuadra al personaje con su base lo más grande posible y lo
+      centra; la cadena del llavero se sale por arriba. Se recalcula al cambiar
+      el tamaño, así se ve igual en cualquier pantalla. */
+  fitHero () {
+    const box = new THREE.Box3()
+    const root = this.avatar.root
+    const props = this.heroProps && this.heroProps.visible ? this.heroProps : null
+    /* Se miden a tamaño completo y de frente aunque la animación de entrada los
+       tenga encogidos o girando: si no, el encuadre saldría distinto cada vez. */
+    const pose = root && { s: root.scale.x, y: root.rotation.y }
+    const propScale = props && props.scale.x
+    if (root) {
+      root.scale.setScalar(1)
+      root.rotation.y = 0
+      root.updateWorldMatrix(true, true)
+      box.setFromObject(root)
+      root.scale.setScalar(pose.s)
+      root.rotation.y = pose.y
+      root.updateWorldMatrix(true, true)
+    }
+    /* Los avatares de la portada cambian y unos son más altos (afro, audífonos...): el
+       encuadre se hace con el más alto, para que ninguno toque el borde de arriba */
+    if (this.heroTop) box.max.y = Math.max(box.max.y, this.heroTop)
+    if (props) {
+      props.scale.setScalar(1)
+      props.updateWorldMatrix(true, true)
+      box.expandByObject(props)
+      props.scale.setScalar(propScale)
+      props.updateWorldMatrix(true, true)
+    }
+    if (box.isEmpty()) return
+
+    const size = box.getSize(new THREE.Vector3())
+    const center = box.getCenter(new THREE.Vector3())
+    const vFov = THREE.MathUtils.degToRad(this.camera.fov)
+    const aspect = this.camera.aspect || 1
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect)
+    /* El eje de giro es el del personaje (x = z = 0), no el del conjunto: por
+       eso el ancho se mide desde ese eje. */
+    const halfW = Math.max(Math.abs(box.min.x), Math.abs(box.max.x))
+    const fillX = aspect < 1 ? HERO.fillXNarrow : HERO.fillX
+    const distV = (size.y / HERO.fill) / (2 * Math.tan(vFov / 2))
+    const distH = (2 * halfW / fillX) / (2 * Math.tan(hFov / 2))
+    const dist = Math.max(distV, distH)
+
+    const visibleH = 2 * dist * Math.tan(vFov / 2)
+    const target = new THREE.Vector3(0, center.y + visibleH * HERO.drop, 0)
+
+    gsap.killTweensOf([this.camera.position, this.controls.target])
+    this.controls.target.copy(target)
+    /* Cámara a la altura de los ojos del encuadre y completamente de frente:
+       sin picado, que es lo que aplanaba la escena. */
+    this.camera.position.set(target.x, target.y, target.z + dist)
+    this.controls.minDistance = dist * 0.5
+    this.controls.maxDistance = dist * 1.5
+    /* Solo giro horizontal: la cámara se queda a esta altura */
+    this.controls.minPolarAngle = this.controls.maxPolarAngle = Math.PI / 2
+    this.controls.update()
+  }
+
+  /** Altura (y) de lo más alto del avatar actual, medida a tamaño completo. */
+  measureAvatarTop () {
+    const root = this.avatar.root
+    if (!root) return 0
+    const pose = { s: root.scale.x, y: root.rotation.y }
+    root.scale.setScalar(1)
+    root.rotation.y = 0
+    root.updateWorldMatrix(true, true)
+    const top = new THREE.Box3().setFromObject(root, true).max.y
+    root.scale.setScalar(pose.s)
+    root.rotation.y = pose.y
+    root.updateWorldMatrix(true, true)
+    return top
+  }
+
+  /** Deja personaje y base escondidos, listos para la entrada. */
+  armHeroIntro () {
+    const root = this.avatar.root
+    if (!root) return
+    gsap.killTweensOf([root.scale, root.rotation])
+    /* El avatar tiene el origen entre los pies y la base está al ras del suelo,
+       así que al escalar desde cero los dos crecen desde el mismo sitio. */
+    root.scale.setScalar(0.001)
+    root.rotation.y = INTRO.turns * Math.PI * 2
+    if (this.heroProps) {
+      gsap.killTweensOf(this.heroProps.scale)
+      this.heroProps.scale.setScalar(0.001)
+    }
+    this.controls.autoRotate = false
+    this._armed = true
+  }
+
+  /** Entrada de la portada: personaje y base crecen juntos, girando. */
+  playHeroIntro () {
+    const root = this.avatar.root
+    if (!root || this.mode !== 'hero') return
+    this.armHeroIntro()
+    this._armed = false
+    clearTimeout(this._resume)
+    const grow = { duration: INTRO.duration, ease: 'back.out(1.5)', x: 1, y: 1, z: 1 }
+    gsap.to(root.scale, grow)
+    if (this.heroProps) gsap.to(this.heroProps.scale, grow)
+    gsap.to(root.rotation, {
+      y: 0,
+      duration: INTRO.duration,
+      ease: 'power2.out'
+    })
+  }
+
+  /** Deshace la entrada: todo vuelve a su tamaño y a mirar al frente. */
+  resetAvatarPose () {
+    const root = this.avatar.root
+    if (!root) return
+    gsap.killTweensOf([root.scale, root.rotation])
+    root.scale.setScalar(1)
+    root.rotation.y = 0
+    if (this.heroProps) {
+      gsap.killTweensOf(this.heroProps.scale)
+      this.heroProps.scale.setScalar(1)
+      this.heroProps.position.y = 0
+    }
+    this._armed = false
   }
 
   setMode (mode, animate = true) {
     this.mode = mode
     const c = this.controls
-    c.enableZoom = mode !== 'showcase'
+    clearTimeout(this._resume)
+    this._stopSnap()
+    c.enableZoom = mode !== 'showcase' && mode !== 'hero'
     c.enableRotate = true
     c.autoRotate = mode === 'showcase' || mode === 'final'
     c.autoRotateSpeed = mode === 'final' ? 0.8 : 1.1
+    if (mode === 'hero') {
+      /* En la portada se ve la base de acrílico, no la isla */
+      this.environment.group.visible = false
+      this.armHeroIntro()
+      this.loadHeroProps().then(() => { if (this.mode === 'hero') this.fitHero() })
+      this.fitHero()
+      return
+    }
+
+    this.environment.group.visible = true
+    if (this.heroProps) this.heroProps.visible = false
+    this.resetAvatarPose()
+    c.minDistance = CAM.minDistance
+    c.maxDistance = CAM.maxDistance
+    c.minPolarAngle = 0.35
+    c.maxPolarAngle = 1.52
     this.focus(mode === 'showcase' ? 'showcase' : mode === 'final' ? 'final' : 'full', animate ? 1.2 : 0)
+  }
+
+  /** Carga (una sola vez) la base de acrílico de la portada. */
+  loadHeroProps () {
+    if (this.heroProps) {
+      this.heroProps.visible = true
+      return Promise.resolve(this.heroProps)
+    }
+    if (!this._heroLoading) {
+      this._heroLoading = createHeroProps()
+        .then(g => {
+          this.heroProps = g
+          this.scene.add(g)
+          g.visible = this.mode === 'hero'
+          /* Si llega con la entrada ya preparada, se esconde como el avatar */
+          if (this._armed) g.scale.setScalar(0.001)
+          return g
+        })
+        .catch(err => {
+          console.warn('[portada] No se pudo cargar el soporte', err)
+          this.environment.group.visible = true
+          return null
+        })
+    }
+    return this._heroLoading
   }
 
   /** Mueve la cámara suavemente a un encuadre (ver SCENE.camera.presets). */
@@ -158,11 +368,56 @@ export class Stage {
     return on
   }
 
+  _stopSnap () {
+    if (this._snap) this._snap.kill()
+    this._snap = null
+    if (this._snapDone) {
+      const done = this._snapDone
+      this._snapDone = null
+      done()
+    }
+  }
+
+  /** Gira la cámara alrededor del personaje, desde donde está hasta "to" (radianes
+      desde el frente). Devuelve una promesa que se cumple al terminar (o al
+      interrumpirse). */
+  _orbit (to, duration, ease) {
+    this._stopSnap()
+    const c = this.controls
+    const cam = this.camera.position
+    const r = Math.hypot(cam.x - c.target.x, cam.z - c.target.z)
+    const a = { v: Math.atan2(cam.x - c.target.x, cam.z - c.target.z) }
+    return new Promise(resolve => {
+      this._snapDone = resolve
+      this._snap = gsap.to(a, {
+        v: to,
+        duration,
+        ease,
+        onUpdate: () => cam.set(c.target.x + Math.sin(a.v) * r, cam.y, c.target.z + Math.cos(a.v) * r),
+        onComplete: () => { this._snap = null; this._snapDone = null; resolve() }
+      })
+    })
+  }
+
+  /** Portada: una vuelta completa y suave que acaba de frente. Si alguien lo
+      había girado a mano, solo vuelve al frente; mientras se arrastra, no hace nada. */
+  heroSpin () {
+    if (this.mode !== 'hero' || this._dragging) return Promise.resolve()
+    const c = this.controls
+    const cam = this.camera.position
+    const a0 = Math.atan2(cam.x - c.target.x, cam.z - c.target.z)
+    if (Math.abs(a0) < 0.05) return this._orbit(-Math.PI * 2, SPIN.duration, SPIN.ease)
+    return this._orbit(0, SPIN.duration * 0.5, SPIN.ease)
+  }
+
   tick () {
     const dt = Math.min(this.clock.getDelta(), 0.05)
     const t = this.clock.elapsedTime
     this.controls.update(dt)
     this.avatar.update(t)
+    /* En la portada la base flota con el personaje: si se quedara quieta, los
+       pies entrarían y saldrían del acrílico. */
+    if (this.mode === 'hero' && this.heroProps) this.heroProps.position.y = idleBob(t)
     this.environment.update(t)
     this.renderer.render(this.scene, this.camera)
   }

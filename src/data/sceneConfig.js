@@ -51,6 +51,7 @@ export const SCENE = {
       body: { pos: [0, 1.1, 4.3], target: [0, 0.8, 0] },
       head: { pos: [0, 1.62, 3.5], target: [0, 1.4, 0] },
       showcase: { pos: [3.1, 2.5, 8.6], target: [0, 0.7, 0] },
+      hero: { pos: [0, 2.5, 9.9], target: [0, 0.85, 0] },
       final: { pos: [1.3, 1.5, 5.4], target: [0, 0.95, 0] }
     }
   }

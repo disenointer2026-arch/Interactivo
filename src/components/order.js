@@ -5,7 +5,7 @@ import { esc, cop, hashString, $, $$ } from '../utils/format.js'
 import { store } from '../utils/store.js'
 import { sound } from '../utils/sound.js'
 import { go } from '../utils/router.js'
-import { renderAvatar } from '../three/Snapshot.js'
+import { renderAvatar, renderProduct } from '../three/Snapshot.js'
 import { productVisual } from './productVisual.js'
 import { createDialog, openDialog, closeDialog } from './dialog.js'
 import { toast } from './toast.js'
@@ -19,6 +19,7 @@ import { toast } from './toast.js'
 const STEPS = ['Producto', 'Tus datos', 'Pago']
 let root = null
 let portrait = ''
+let productImg = ''   // render de la figura con su base, cadena y charm
 let loginDialog = null
 
 const draft = {
@@ -160,7 +161,7 @@ function summaryAside () {
   const t = totals()
   return `
     <div class="order-summary-card">
-      <div class="os-visual">${productVisual(p.id, portrait)}</div>
+      <div class="os-visual os-visual--render"><img class="os-render" alt="Render de la figura con su cadena, charm y base de acrílico" ${productImg ? `src="${productImg}"` : ''} /></div>
       <h2 class="os-title">${esc(p.name)} de <span data-avname>${esc(store.profile.name || 'tu avatar')}</span></h2>
       <p class="os-avail"><span class="avail-dot" aria-hidden="true"></span>Disponible · ${esc(p.days)}</p>
       <dl class="os-lines">
@@ -438,18 +439,48 @@ function onKeys (e) {
   n.focus(); n.click()
 }
 
+/** Genera el render del producto con la proporción actual del cuadro, para que lo llene
+    sin franjas aunque la ventana cambie (el cuadro es más alto o más ancho según el diseño) */
+let renderedSize = ''
+async function refreshProductRender () {
+  const box = root && $('.os-visual--render', root)
+  if (!box) return
+  const { width, height } = box.getBoundingClientRect()
+  if (!width || !height) return
+  const k = Math.min(2, 720 / Math.max(width, height))
+  const size = { width: Math.round(width * k), height: Math.round(height * k) }
+  const key = `${Math.round(size.width / 24)}x${Math.round(size.height / 24)}`   // ignora cambios mínimos
+  if (key === renderedSize && productImg) return
+  renderedSize = key
+  const url = (await renderProduct(store.state, size)) || ''
+  if (!root || !url || key !== renderedSize) return
+  productImg = url
+  $$('.os-render', root).forEach(img => { img.src = productImg })
+}
+
+let resizeTimer = null
+const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(refreshProductRender, 250) }
+
 export const orderView = {
   name: 'order',
   async mount (el) {
     root = el
     draft.step = 0
     portrait = ''
+    productImg = ''
     el.innerHTML = template()
     renderStep()
     el.addEventListener('click', onClick)
     el.addEventListener('keydown', onKeys)
     portrait = (await renderAvatar(store.state, { width: 360, height: 360, framing: 'portrait' })) || ''
     if (root && portrait) $$('.pv-img', root).forEach(img => { img.src = portrait })
+    renderedSize = ''
+    window.addEventListener('resize', onResize)
+    await refreshProductRender()
   },
-  unmount () { root = null }
+  unmount () {
+    root = null
+    clearTimeout(resizeTimer)
+    window.removeEventListener('resize', onResize)
+  }
 }

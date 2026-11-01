@@ -1,138 +1,60 @@
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { HOME, TESTIMONIALS, PEEK } from '../data/content.js'
+import { HOME, TESTIMONIALS, HERO_AVATARS } from '../data/content.js'
 import { sanitizeAvatar } from '../data/avatarOptions.js'
-import { icon, leafDeco, foliage, FOLIAGE_H, SPROUT_H } from '../utils/icons.js'
+import { icon } from '../utils/icons.js'
 import { esc, $, $$, REDUCED_MOTION } from '../utils/format.js'
 import { store } from '../utils/store.js'
 import { getStage } from '../three/Stage.js'
 import { renderAvatar } from '../three/Snapshot.js'
+import { goSection } from '../utils/router.js'
+import { whenBootDone } from './boot.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
 let stage = null
 let ctx = null
 let refreshTimer = null
-let greetTimer = null
-let greetBack = null
 let hintTimer = null
-let hintWatcher = null
+let swapTimer = null
+let onScrollDown = null
+let heroRun = 0
+const HERO_HOLD_MS = 1000   // cuánto se queda de frente cada avatar antes de girar
+const HERO_INTRO_MS = 1600  // la entrada del primer avatar (ver Stage.playHeroIntro)
 
-function stopGreeting () {
-  clearInterval(greetTimer)
-  clearTimeout(greetBack)
-  greetTimer = greetBack = null
-}
-
-/* Las imágenes (banner, fotos y retratos 3D) llegan después del primer pintado y
-   mueven la página: hay que recalcular los disparadores de scroll cuando cargan. */
+/* Los retratos 3D llegan después del primer pintado y mueven la página: hay que
+   recalcular los disparadores de scroll cuando cargan. */
 function scheduleRefresh () {
   clearTimeout(refreshTimer)
   refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 150)
 }
 
-/* Hojas sueltas que se mecen sobre el seto: posición en % y variante de ritmo. */
-const SWAYING = [
-  { x: 7, v: 0 }, { x: 19, v: 2 }, { x: 31, v: 1 }, { x: 44, v: 0 },
-  { x: 57, v: 2 }, { x: 68, v: 1 }, { x: 81, v: 0 }, { x: 93, v: 2 }
-]
-
-/** Personajes asomados detrás del seto (se recortan por abajo). */
-function peekers () {
-  return `<div class="island-peek" aria-hidden="true">
-    ${PEEK.map(p => `
-      <span class="peek peek--${p.anim}${p.small ? '' : ' peek--wide'}"
-            style="left:${p.x}%; bottom:${p.show - p.h}px; animation-delay:${p.delay}s">
-        <img src="${p.src}" alt="" style="height:${p.h}px" loading="lazy" decoding="async" />
-      </span>`).join('')}
-  </div>`
-}
-
-/** Borde de seto (hojas + manzanas) con algunas hojas animadas.
-    Se coloca de modo que la masa verde arranque justo en el borde de la sección
-    y las hojas sueltas sobresalgan por fuera. */
-function islandEdge (where) {
-  const place = where === 'top' ? `top:${-SPROUT_H}px` : `bottom:${SPROUT_H - FOLIAGE_H}px`
-  return `<span class="island-edge island-edge--${where}" style="${place}" aria-hidden="true">
-    ${foliage(`foliage-${where}`)}
-    ${SWAYING.map(l => `<span class="edge-leaf edge-leaf--${l.v}" style="left:${l.x}%">${leafDeco('#4C9B46')}</span>`).join('')}
-  </span>`
-}
-
 function template () {
   const b = HOME.banner
   const c = HOME.build
-  const l = HOME.band
-  const is = HOME.island
   const t = HOME.testimonials
   return `
   <h1 class="sr-only">MINISO × Animal Crossing — ${esc(b.title)}</h1>
 
-  <section id="inicio" class="banner" aria-label="${esc(b.title)}">
-    <img class="banner-img" src="${b.src}" alt="${esc(b.alt)}" fetchpriority="high" decoding="async" />
+  <section id="inicio" class="hero3d" aria-label="${esc(b.title)}">
+    <div class="hero3d-bg" aria-hidden="true"></div>
+    <p class="hero3d-word" aria-hidden="true">${esc(b.word)}</p>
+    <div class="hero3d-visual">
+      <div class="hero3d-stage stage-mount" id="heroIsland">
+        <div class="stage-loading" aria-hidden="true">${icon('leaf')}</div>
+      </div>
+      <p class="build-hint hero3d-hint">${icon('rotate')}<span>${esc(b.hint)}</span></p>
+    </div>
+    <button type="button" class="hero3d-down hero3d-down--left" data-to-collab aria-label="Ir a la colaboración">${icon('arrowDown')}</button>
+    <button type="button" class="hero3d-down hero3d-down--right" data-to-collab aria-label="Ir a la colaboración">${icon('arrowDown')}</button>
   </section>
 
   <section id="colaboracion" class="build" aria-labelledby="build-title">
-    <img class="build-blob" src="${c.face.src}" alt="" aria-hidden="true" loading="lazy" decoding="async" />
-    <div class="wrap build-grid">
-      <div class="build-copy">
-        <h2 id="build-title" class="build-title">${esc(c.title)}</h2>
-        <p>${esc(c.text)}</p>
-        <p>${esc(c.text2)}</p>
-        <a class="btn btn--primary btn--lg btn--cta" href="#/personalizar">${esc(c.cta)}</a>
-      </div>
-      <div class="build-visual">
-        <div class="build-stage stage-mount" id="heroStage">
-          <div class="stage-loading" aria-hidden="true">${icon('leaf')}</div>
-        </div>
-        <div class="drag-hint" aria-hidden="true">
-          <span class="drag-row">
-            ${icon('arrowLeft', 'drag-arrow drag-arrow--l')}
-            <img class="drag-hand" src="images/gesto-arrastrar.png" alt="" loading="lazy" />
-            ${icon('arrowRight', 'drag-arrow drag-arrow--r')}
-          </span>
-          <p>${esc(c.dragHint)}</p>
-        </div>
-        <p class="build-hint">${icon('rotate')}<span>${esc(c.hint)}</span></p>
-        <div class="float float--a" aria-hidden="true">${leafDeco('#8CC37A')}</div>
-        <div class="float float--b" aria-hidden="true">${leafDeco('#F2A7B8')}</div>
-      </div>
+    <div class="wrap build-copy">
+      <h2 id="build-title" class="build-title">${esc(c.title)}</h2>
+      <p>${esc(c.text)}</p>
+      <a class="btn btn--primary btn--lg btn--cta" href="#/personalizar">${esc(c.cta)}</a>
     </div>
-  </section>
-
-  <section id="coleccion" class="photo-band" aria-labelledby="photo-title" aria-roledescription="carrusel">
-    ${l.slides.map((s, i) => `
-      <img class="pb-slide${i === 0 ? ' is-on' : ''}" src="${s.src}" alt="${esc(s.alt)}" ${i === 0 ? '' : 'loading="lazy"'} decoding="async" />`).join('')}
-    <div class="photo-band-copy">
-      <p class="pb-kicker">${esc(l.kicker)}</p>
-      <h2 id="photo-title">${esc(l.title)}</h2>
-      <a class="btn btn--lg btn--cta" href="#/personalizar">${esc(l.cta)}</a>
-    </div>
-    <button type="button" class="pb-nav pb-nav--prev" data-step="-1" aria-label="Imagen anterior">${icon('arrowLeft')}</button>
-    <button type="button" class="pb-nav pb-nav--next" data-step="1" aria-label="Imagen siguiente">${icon('arrowRight')}</button>
-    <div class="pb-dots">
-      ${l.slides.map((s, i) => `<button type="button" class="pb-dot${i === 0 ? ' is-on' : ''}" data-go="${i}" aria-label="Ver imagen ${i + 1} de ${l.slides.length}"></button>`).join('')}
-    </div>
-  </section>
-
-  <section id="como-funciona" class="island" aria-labelledby="island-title">
-    ${islandEdge('top')}
-    <div class="wrap island-inner">
-      <header class="section-head section-head--center">
-        <h2 id="island-title">${esc(is.title)}</h2>
-        <p>${esc(is.text)}</p>
-      </header>
-      <ol class="journey">
-        ${is.steps.map((s, i) => `
-          <li class="journey-step">
-            <span class="journey-num" aria-hidden="true">${i + 1}</span>
-            <h3>${esc(s.title)}</h3>
-            <p>${esc(s.text)}</p>
-          </li>`).join('')}
-      </ol>
-    </div>
-    ${peekers()}
-    ${islandEdge('bottom')}
   </section>
 
   <section id="testimonios" class="testimonials" aria-labelledby="t-title">
@@ -160,30 +82,8 @@ function template () {
   <section class="closing" aria-label="Empieza tu avatar">
     <div class="wrap closing-inner">
       <a class="btn btn--primary btn--lg btn--cta" href="#/personalizar">${esc(t.cta)}</a>
-      <img class="closing-avatar" data-closing alt="" />
     </div>
   </section>`
-}
-
-/* Avatar del cierre: asoma por detrás del pie de página y cada cierto rato
-   cambia a una versión sonriente mientras saluda. */
-async function closingAvatar (root) {
-  const el = $('[data-closing]', root)
-  if (!el) return
-  const calm = await renderAvatar(store.state, { width: 420, height: 560, framing: 'full' })
-  if (!calm || !root.isConnected) return
-  el.src = calm
-  gsap.fromTo(el, { autoAlpha: 0, y: 16 }, { autoAlpha: 1, y: 0, duration: 0.6, ease: 'power2.out' })
-
-  if (REDUCED_MOTION) return
-  const happy = await renderAvatar({ ...store.state, mouth: 'teeth', eyes: 'happy' }, { width: 420, height: 560, framing: 'full' })
-  if (!happy || !root.isConnected) return
-  greetTimer = setInterval(() => {
-    if (!el.isConnected) return stopGreeting()
-    el.src = happy
-    el.classList.add('is-greeting')
-    greetBack = setTimeout(() => { el.src = calm; el.classList.remove('is-greeting') }, 2400)
-  }, 8000)
 }
 
 async function loadPortraits (root) {
@@ -197,7 +97,9 @@ async function loadPortraits (root) {
 }
 
 function bannerIntro (root) {
-  gsap.from($('.banner-img', root), { scale: 1.04, autoAlpha: 0, duration: 1, ease: 'power2.out' })
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
+  tl.from($('.hero3d-word', root), { y: 26, autoAlpha: 0, duration: 0.9 })
+    .from($('.hero3d-visual', root), { scale: 0.94, autoAlpha: 0, duration: 1.1, ease: 'expo.out' }, 0.1)
 }
 
 function scrollReveals (root) {
@@ -214,47 +116,8 @@ function scrollReveals (root) {
      y, si la entrada los dejara desplazados, saltarían al pasar el mouse. */
   reveal('.build-copy > :not(.btn)', $('.build', root))
   reveal('.build-copy > .btn', $('.build', root), { y: 0, stagger: 0 })
-  reveal('.build-visual', $('.build', root), { y: 0, scale: 0.95, duration: 0.9, stagger: 0 })
-  reveal('.photo-band-copy', $('.photo-band', root))
-  reveal('.journey-step', $('.journey', root), { stagger: 0.14 })
   reveal('.t-card', $('.t-carousel', root), { stagger: 0.08 })
-  reveal('.closing-inner > :not(.btn)', $('.closing', root))
   reveal('.closing-inner > .btn', $('.closing', root), { y: 0, stagger: 0 })
-
-  if (!REDUCED_MOTION) {
-    $$('.float', root).forEach((el, i) => {
-      gsap.to(el, { y: i % 2 ? -10 : 10, rotation: i % 2 ? 6 : -6, duration: 3 + i, yoyo: true, repeat: -1, ease: 'sine.inOut' })
-    })
-  }
-}
-
-/* Aviso "mueve la visualización": aparece cada vez que la escena 3D entra en
-   pantalla (bajando o subiendo) y se va al interactuar o a los pocos segundos. */
-function dragHint (root) {
-  const visual = $('.build-visual', root)
-  const hint = $('.drag-hint', root)
-  if (!visual || !hint) return
-
-  const hide = () => {
-    clearTimeout(hintTimer)
-    visual.classList.remove('is-hinting')
-  }
-  const show = () => {
-    clearTimeout(hintTimer)
-    visual.classList.add('is-hinting')
-    hintTimer = setTimeout(hide, 4000)
-  }
-
-  /* IntersectionObserver en vez de ScrollTrigger: avisa igual de bien al bajar
-     que al subir, sin depender del refresco de las animaciones. */
-  hintWatcher = new IntersectionObserver(([entry]) => {
-    if (entry.isIntersecting) show()
-    else hide()
-  }, { threshold: 0.45 })
-  hintWatcher.observe(visual)
-
-  /* Si ya está arrastrando, el aviso sobra */
-  visual.addEventListener('pointerdown', hide)
 }
 
 /** Testimonios: una fila de tres y flechas para ver el resto. */
@@ -276,33 +139,6 @@ function testimonialCarousel (root) {
   next.addEventListener('click', () => go(1))
 }
 
-/** Carrusel de la banda fotográfica: flechas, puntos y teclado. */
-function bandSlider (root) {
-  const band = $('.photo-band', root)
-  if (!band) return
-  const slides = $$('.pb-slide', band)
-  const dots = $$('.pb-dot', band)
-  if (slides.length < 2) return
-  let at = 0
-
-  const show = n => {
-    at = (n + slides.length) % slides.length
-    slides.forEach((s, i) => s.classList.toggle('is-on', i === at))
-    dots.forEach((d, i) => d.classList.toggle('is-on', i === at))
-  }
-
-  band.addEventListener('click', e => {
-    const step = e.target.closest('[data-step]')
-    if (step) return show(at + Number(step.dataset.step))
-    const go = e.target.closest('[data-go]')
-    if (go) show(Number(go.dataset.go))
-  })
-  band.addEventListener('keydown', e => {
-    if (e.key === 'ArrowLeft') show(at - 1)
-    if (e.key === 'ArrowRight') show(at + 1)
-  })
-}
-
 export const homeView = {
   name: 'home',
   async mount (el) {
@@ -312,29 +148,76 @@ export const homeView = {
       bannerIntro(root)
       scrollReveals(root)
     }, root)
-    bandSlider(root)
     testimonialCarousel(root)
-    dragHint(root)
+    /* Las flechas de las esquinas llevan a "La colaboración" y se esconden en cuanto
+       la página empieza a bajar */
+    const downs = $$('[data-to-collab]', root)
+    downs.forEach(b => b.addEventListener('click', () => goSection('colaboracion')))
+    onScrollDown = () => downs.forEach(b => b.classList.toggle('is-hidden', window.scrollY > 40))
+    window.addEventListener('scroll', onScrollDown, { passive: true })
+    onScrollDown()
+    /* El aviso de arrastrar se retira solo; también al primer arrastre */
+    const hint = $('.hero3d-hint', root)
+    const visual = $('.hero3d-visual', root)
+    if (hint) {
+      const drop = () => { clearTimeout(hintTimer); hint.classList.add('is-gone') }
+      hintTimer = setTimeout(drop, 7000)
+      visual && visual.addEventListener('pointerdown', drop, { once: true })
+    }
     $$('img', root).forEach(img => img.addEventListener('load', scheduleRefresh))
 
     stage = await getStage(store.state)
-    const mount = $('#heroStage', root)
+    const mount = $('#heroIsland', root)
     if (stage && mount && root.isConnected) {
-      await stage.avatar.apply(store.state)
-      stage.attach(mount, 'showcase')
+      /* Sin charm: ni el que colgaba de la cadena ni el que acompaña al avatar
+         en el suelo (quedaban encima del personaje y lo tapaban). */
+      const looks = HERO_AVATARS.map(a => ({ ...sanitizeAvatar(a), companion: 'none' }))
+      /* Se prueban todos antes de mostrar la portada: así sus piezas ya están
+         cargadas y el cambio de uno a otro es instantáneo. */
+      stage.avatar.instantColors = true
+      let top = 0
+      for (const look of looks) {
+        await stage.avatar.apply(look)
+        top = Math.max(top, stage.measureAvatarTop())
+      }
+      stage.heroTop = top   // el encuadre de la portada cuenta con el avatar más alto
+      await stage.avatar.apply(looks[0])
+      stage.attach(mount, 'hero')
       $('.stage-loading', mount)?.remove()
+      /* La entrada del personaje espera a que se retire la capa de carga,
+         si no se la perdería detrás del velo. */
+      whenBootDone().then(() => { if (root.isConnected) stage.playHeroIntro() })
+      /* Ciclo de la portada: el personaje se queda de frente, cambia de avatar,
+         da una vuelta completa y vuelve al frente; y así sucesivamente. */
+      const run = ++heroRun
+      const alive = () => heroRun === run && root.isConnected
+      const wait = ms => new Promise(r => { swapTimer = setTimeout(r, ms) })
+      ;(async () => {
+        await whenBootDone()
+        await wait(HERO_INTRO_MS)
+        let n = 0
+        while (alive()) {
+          await wait(HERO_HOLD_MS)
+          if (!alive()) break
+          await stage.heroSpin()
+          if (!alive()) break
+          n = (n + 1) % looks.length
+          await stage.avatar.apply(looks[n])
+        }
+      })()
     } else if (mount) {
       mount.innerHTML = '<p class="stage-fallback">Tu navegador no pudo iniciar la vista 3D. Puedes seguir explorando la colaboración.</p>'
     }
-    closingAvatar(root)
     loadPortraits(root)
   },
   unmount () {
     clearTimeout(refreshTimer)
     clearTimeout(hintTimer)
-    hintWatcher && hintWatcher.disconnect()
-    hintWatcher = null
-    stopGreeting()
+    heroRun++
+    if (onScrollDown) window.removeEventListener('scroll', onScrollDown)
+    onScrollDown = null
+    clearTimeout(swapTimer)
+    if (stage) stage.avatar.instantColors = false
     ctx && ctx.revert()
     ScrollTrigger.getAll().forEach(st => st.kill())
     stage && stage.detach()

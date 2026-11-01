@@ -1,5 +1,6 @@
-import { SITE, HOME_NAV, MINISO_NAV, MINISO_LINKS, SECTIONS, FOOTER } from '../data/content.js'
-import { icon } from '../utils/icons.js'
+import { SITE, HOME_NAV, MINISO_NAV, MINISO_LINKS, SECTIONS, FOOTER, PEEK } from '../data/content.js'
+import { icon, bushRow, minisoFace } from '../utils/icons.js'
+import { esc } from '../utils/format.js'
 import { goSection } from '../utils/router.js'
 import { sound } from '../utils/sound.js'
 import { createDialog, openDialog, closeDialog } from './dialog.js'
@@ -108,18 +109,21 @@ export function renderHeader (el) {
   }
   window.addEventListener('hashchange', () => setTimeout(mark, 400))
 
-  const onScroll = () => {
-    el.classList.toggle('is-scrolled', window.scrollY > 8)
-    mark()
-  }
-  window.addEventListener('scroll', onScroll, { passive: true })
-  onScroll()
+  window.addEventListener('scroll', mark, { passive: true })
+  mark()
 }
 
 export function renderFooter (el) {
   el.innerHTML = `
+    <div class="hf-peek" aria-hidden="true">
+      ${PEEK.map(p => `
+        <span class="peek peek--${p.anim} peek--${p.tier}"
+              style="--x:${p.x}%;${p.xm ? `--xm:${p.xm}%;` : ''}${p.xs ? `--xs:${p.xs}%;` : ''} --h:${p.h}px; --show:${p.show}px; animation-delay:${p.delay}s">
+          <img src="${p.src}" alt="${esc(p.alt)}" loading="lazy" decoding="async" />
+        </span>`).join('')}
+    </div>
+    <div class="hf-hedge" aria-hidden="true">${bushRow('hedge-footer')}</div>
     <div class="hf">
-      <img class="hf-mark" src="images/cara-miniso.png" alt="" aria-hidden="true" loading="lazy" />
       <div class="hf-inner">
         <div class="hf-brand">
           <img class="hf-logo" src="images/logo-miniso.png" alt="MINISO × Animal Crossing" width="1000" height="1175" />
@@ -128,14 +132,8 @@ export function renderFooter (el) {
             <a href="#/" data-top>${FOOTER.email}</a>
           </p>
         </div>
-        <nav class="hf-cols" aria-label="Pie de página">
-          ${FOOTER.columns.map(c => `
-            <div class="hf-col">
-              <h2><a href="#/" data-top>${c.title}</a></h2>
-              ${c.links.length ? `<ul>${c.links.map(l => `<li><a href="#/" data-top>${l}</a></li>`).join('')}</ul>` : ''}
-            </div>`).join('')}
-        </nav>
       </div>
+      <span class="hf-face" aria-hidden="true">${minisoFace()}</span>
       <div class="hf-legal">
         <div class="hf-legal-inner">
           <p class="hf-copy">${FOOTER.copyright}</p>
@@ -144,7 +142,7 @@ export function renderFooter (el) {
       </div>
     </div>`
 
-  // Los enlaces del pie no salen del sitio: llevan a la parte superior del inicio
+  // El correo no sale del sitio: lleva a la parte superior del inicio
   el.addEventListener('click', e => {
     if (!e.target.closest('[data-top]')) return
     e.preventDefault()

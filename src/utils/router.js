@@ -81,8 +81,11 @@ async function swap () {
   }
 }
 
+/** Arranca el router y devuelve la promesa de la primera vista montada
+    (la usa la pantalla de carga para saber cuándo desaparecer). */
 export function startRouter (el) {
   outlet = el
   window.addEventListener('hashchange', render)
   render()
+  return busy
 }

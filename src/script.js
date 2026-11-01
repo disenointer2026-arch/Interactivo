@@ -4,6 +4,7 @@ import { SITE } from './data/content.js'
 import { route, startRouter } from './utils/router.js'
 import { REDUCED_MOTION } from './utils/format.js'
 import { sound } from './utils/sound.js'
+import { startBoot, finishBoot } from './components/boot.js'
 import { renderHeader, renderFooter, renderBackToTop } from './components/layout.js'
 import { homeView } from './components/home.js'
 import { customizerView } from './components/customizer.js'
@@ -28,6 +29,11 @@ import { infoView } from './components/info.js'
 document.title = SITE.title
 if (REDUCED_MOTION) gsap.globalTimeline.timeScale(4)
 
+/* Al recargar siempre se empieza arriba: la portada es parte de la entrada */
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+
+startBoot()
+
 renderHeader(document.getElementById('site-header'))
 renderFooter(document.getElementById('site-footer'))
 renderBackToTop(document.body)
@@ -46,4 +52,4 @@ route('/confirmacion', confirmationView)
 route('/tarjeta', cardView)
 route('/info', infoView)
 
-startRouter(document.getElementById('app'))
+startRouter(document.getElementById('app')).then(finishBoot, finishBoot)

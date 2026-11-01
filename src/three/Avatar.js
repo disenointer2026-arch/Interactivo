@@ -82,6 +82,14 @@ const POSES = {
 
 export const SLOT_BY_KEY = Object.fromEntries(SLOTS.filter(s => s.key).map(s => [s.key, s]))
 
+/** Flotación de reposo del avatar. La portada la aplica también a la base de
+    acrílico, para que personaje y base suban y bajen como una sola pieza.
+    Ahora el avatar tiene los pies en el suelo (solo respira con los huesos),
+    así que la base tampoco flota. */
+export function idleBob (t) {
+  return 0
+}
+
 export class Avatar {
   constructor ({ animated = true } = {}) {
     this.animated = animated
@@ -342,7 +350,7 @@ export class Avatar {
       mats.forEach(m => {
         if (!m || !m.userData || m.userData.role !== role) return
         const c = roleColor(hex, m.userData.shade || 1)
-        if (this.animated) gsap.to(m.color, { r: c.r, g: c.g, b: c.b, duration: 0.45, ease: 'power2.out' })
+        if (this.animated && !this.instantColors) gsap.to(m.color, { r: c.r, g: c.g, b: c.b, duration: 0.45, ease: 'power2.out' })
         else m.color.copy(c)
       })
     })

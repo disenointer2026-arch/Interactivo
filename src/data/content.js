@@ -26,8 +26,6 @@ export const MINISO_LINKS = {
 export const HOME_NAV = [
   { label: 'Inicio', section: 'inicio' },
   { label: 'Colaboración', section: 'colaboracion' },
-  { label: 'Colección', section: 'coleccion' },
-  { label: 'Cómo funciona', section: 'como-funciona' },
   { label: 'Testimonios', section: 'testimonios' }
 ]
 
@@ -43,7 +41,6 @@ export const MINISO_NAV = [
 /* Anclas dentro del inicio (menú lateral) */
 export const SECTIONS = [
   { label: 'La colaboración', section: 'colaboracion' },
-  { label: 'Cómo funciona', section: 'como-funciona' },
   { label: 'Testimonios', section: 'testimonios' }
 ]
 
@@ -85,46 +82,18 @@ export const INFO_PAGES = {
    Cambia la ruta y el texto alternativo de cada banda aquí.
    ========================================================================== */
 export const HOME = {
+  /* Portada: la isla 3D girando sobre un texto grande de fondo */
   banner: {
-    src: 'images/hero-banner.webp',
-    alt: 'Llaveros y figuras de la colaboración MINISO × Animal Crossing sobre un muelle de la isla, con Canela, Tom Nook y dos vecinos.',
-    title: '¡Lleva la ternura de la isla a tu hogar!'
+    title: '¡Lleva la ternura de la isla a tu hogar!',
+    word: 'Lo más nuevo',
+    hint: 'Arrástrala para girarla',
+    dragHint: 'Mueve la isla'
   },
+  /* Texto de apertura, centrado bajo la portada */
   build: {
-    title: 'Construye tu avatar. Hazlo tuyo.',
-    text: 'Esta colaboración une el diseño práctico de MINISO con el espíritu relajado de Animal Crossing. Aquí no eliges un producto de un catálogo: lo diseñas tú.',
-    text2: 'Elige su cabello, su ropa, sus accesorios y hasta quién lo acompaña. Cuando esté listo, lo convertimos en una figura que puedes tener en tus manos.',
-    cta: '¡Hacer mi avatar!',
-    hint: 'Arrastra para girarlo',
-    dragHint: 'Mueve la visualización',
-    /* Marca de agua detrás del texto */
-    face: { src: 'images/cara-miniso.png' }
-  },
-  /* Banda con carrusel: añade o quita imágenes en "slides" */
-  band: {
-    kicker: 'MINISO × Animal Crossing',
-    title: 'Participa en nuestra nueva colección.',
-    cta: '¡Hacer mi avatar!',
-    slides: [
-      {
-        src: 'images/lifestyle-pareja.jpg',
-        alt: 'Dos personas sentadas muestran una mochila con un llavero de Canela y una figura personalizada en la mano.'
-      },
-      {
-        src: 'images/coleccion-figuras.jpg',
-        alt: 'Figuras y llaveros de la colección junto a una mochila verde menta con hojas estampadas.'
-      }
-    ]
-  },
-  island: {
-    title: 'Cómo funciona',
-    text: 'Cuatro pasos entre la primera decisión y la caja con ventana.',
-    steps: [
-      { title: 'Crea', text: 'Arma tu avatar pieza por pieza, desde la forma del cuerpo hasta sus orejas.' },
-      { title: 'Transforma', text: 'Cada decisión cambia el avatar al instante. Prueba, deshaz y vuelve a probar.' },
-      { title: 'Contempla', text: 'Gíralo, acércate y reconoce en él algo tuyo.' },
-      { title: 'Materializa', text: 'Pide tu figura y genera tu tarjeta coleccionable.' }
-    ]
+    title: '¡Tu mundo, tu estilo, tu personaje!',
+    text: 'Cada persona tiene una forma única de expresarse y ahora puedes darle vida a través de tu propio avatar. MINISO × Animal Crossing te invita a explorar, combinar prendas, colores y accesorios para crear un personaje que refleje tus gustos, tu estilo y tu personalidad. Una experiencia que transforma una compra en algo más significativo: un producto con el que puedes sentirte identificado, representado y que, sobre todo, tenga algo de ti.',
+    cta: '¡Hacer mi avatar!'
   },
   testimonials: {
     title: 'Ellos te lo cuentan',
@@ -132,15 +101,21 @@ export const HOME = {
   }
 }
 
-/* Personajes que se asoman por detrás del seto de abajo.
-   x = posición horizontal en %, h = alto de la imagen, show = cuánto asoma (px),
-   anim = sway | wave | bob, small = si también se ve en pantallas estrechas. */
+/* Vecinos asomados por detrás del seto que abre el pie de página.
+   x     = borde izquierdo, en % del ancho de la página
+   xm/xs = dónde se coloca cuando se esconden los demás (hasta 1100 y 760 px)
+   h     = alto de la imagen en px
+   show  = cuánto se ve por encima de la línea de corte (lo de abajo lo tapa
+           el seto); conviene dejar la cara bien por encima de las hojas
+   anim  = sway (se mece) | bob (sube y baja) | greet (se mece y da un brinco)
+   tier  = always (siempre) | mid (desde 760 px) | wide (desde 1100 px) */
 export const PEEK = [
-  { src: 'images/personajes/canela.png', alt: 'Canela', x: 19, h: 300, show: 196, anim: 'sway', delay: 0, small: true },
-  { src: 'images/personajes/tom-nook.png', alt: 'Tom Nook', x: 32, h: 290, show: 186, anim: 'wave', delay: -0.8, small: true },
-  { src: 'images/personajes/aldeana.png', alt: 'Aldeana con gafas', x: 45, h: 185, show: 152, anim: 'bob', delay: -2.2, small: false },
-  { src: 'images/personajes/candres.png', alt: 'Candrés', x: 56, h: 285, show: 180, anim: 'wave', delay: -3.1, small: false },
-  { src: 'images/personajes/wilbur.png', alt: 'Wilbur', x: 68, h: 260, show: 168, anim: 'sway', delay: -1.9, small: true }
+  { src: 'images/personajes/canela.png', alt: 'Canela', x: 2, xs: 3, h: 330, show: 230, anim: 'sway', delay: 0, tier: 'always' },
+  { src: 'images/personajes/tom-nook.png', alt: 'Tom Nook', x: 14, xm: 22, h: 300, show: 212, anim: 'greet', delay: -0.8, tier: 'mid' },
+  { src: 'images/personajes/candres.png', alt: 'Candrés', x: 26, h: 315, show: 222, anim: 'bob', delay: -2.2, tier: 'wide' },
+  { src: 'images/personajes/porter.png', alt: 'Estibaldo', x: 54, h: 340, show: 238, anim: 'greet', delay: -4.6, tier: 'wide' },
+  { src: 'images/personajes/kappn.png', alt: 'Capitán', x: 75, xm: 58, h: 310, show: 218, anim: 'sway', delay: -1.9, tier: 'mid' },
+  { src: 'images/personajes/wilbur.png', alt: 'Wilbur', x: 87, xm: 80, xs: 60, h: 295, show: 208, anim: 'bob', delay: -3.3, tier: 'always' }
 ]
 
 /* Pie de página (columnas del sitemap + datos de contacto).
@@ -148,14 +123,10 @@ export const PEEK = [
 export const FOOTER = {
   inquiriesLabel: 'Consultas de franquicia',
   email: 'Franchise@miniso.com',
-  // Todos los enlaces del pie llevan al inicio de la página principal (ver renderFooter)
-  columns: [
-    { title: 'Marca', links: ['Perfil de marca'] },
-    { title: 'Productos', links: ['Colaboración IP', '¡Hacer mi avatar!'] },
-    { title: 'Tiendas', links: ['Nuestras tiendas'] },
-    { title: 'Inversores', links: [] },
-    { title: 'Responsabilidad social', links: [] }
-  ],
+  /* El pie repite el mismo menú: las secciones del encabezado (HOME_NAV) y los
+     enlaces a miniso.com del menú lateral (MINISO_NAV). Ver renderFooter. */
+  navTitle: 'La colaboración',
+  brandTitle: 'MINISO',
   copyright: 'Copyright © 2026 · MINISO × Animal Crossing (colaboración ficticia)'
 }
 
@@ -164,7 +135,7 @@ export const FOOTER = {
 export const TESTIMONIALS = [
   {
     name: 'Valentina', place: 'Cali',
-    quote: 'Le puse mis gafas redondas y mi bufanda roja. Cuando llegó la figura, mi mamá dijo que era yo en miniatura.',
+    quote: 'Le puse mis gafas redondas y el pelo con ondas, igualito al mío. Cuando llegó la figura, mi mamá dijo que era yo en miniatura.',
     avatar: { hair: 'ondas', hairColor: '#3F3B33', accHead: 'gafas-redondas', shirt: 'camisa', shirtColor: '#F6F1E6', skin: '#FFAF7D', mouth: 'teeth' }
   },
   {
@@ -174,29 +145,40 @@ export const TESTIMONIALS = [
   },
   {
     name: 'Mariana', place: 'Bogotá',
-    quote: 'Me encantó poder poner a mi gata. Es el regalo de cumpleaños más personal que le he dado a mi hermana.',
+    quote: 'Le armé una a mi hermana, con el pelo largo, una flor y el tulipán de charm. Es el regalo de cumpleaños más personal que le he dado.',
     avatar: { hair: 'largo', hairColor: '#D2CA7F', shirt: 'vestido', shirtColor: '#F2A7B8', companion: 'tulipan', skin: '#FFDCC6', eyes: 'happy', accHead: 'flor' }
   },
   {
     name: 'Samuel', place: 'Barranquilla',
-    quote: 'Recogí mi pedido en la tienda y ya venía en una cajita con ventana. Se siente como un coleccionable de verdad.',
+    quote: 'Le puse sombrero, chaqueta de jean y un regalo de charm. La figura llegó con su cadena y su base de acrílico, y se siente como un coleccionable de verdad.',
     avatar: { hair: 'afro', hairColor: '#3F3B33', shirt: 'chaqueta-2', shirtColor: '#F6D365', skin: '#AF735C', accHead: 'sombrero', companion: 'regalo' }
   },
   {
     name: 'Lucía', place: 'Pereira',
-    quote: 'Nada de plantillas: cada decisión la tomé yo. Por eso se siente mío.',
+    quote: 'Nada de plantillas: elegí cada detalle, hasta el color de las colitas. Por eso se siente mío.',
     avatar: { hair: 'colitas', hairColor: '#F89FAD', shirt: 'camisa-2', shirtColor: '#7FB3D5', skin: '#FFCCAB', eyes: 'lashesTop', eyeColor: '#9B97A2' }
   },
   {
     name: 'Tomás', place: 'Cartagena',
-    quote: 'Hice uno para mí y otro para mi abuelo, con su sombrero y su perro. Los dos están en su repisa.',
+    quote: 'Hice uno para mí y otro para mi abuelo, con su gorra y su guitarra de charm. Los dos están en su repisa.',
     avatar: { hair: 'none', shirt: 'manga-larga', shirtColor: '#F6F1E6', skin: '#AF735C', accHead: 'gorra', companion: 'guitarra' }
   }
 ]
 
+/* Avatares que se turnan en la portada (uno por segundo) para mostrar que el
+   producto es personalizable. Las claves que faltan toman el valor por defecto. */
+export const HERO_AVATARS = [
+  { hair: 'afro', hairColor: '#5A3932', skin: '#C6815D', accHead: 'gafas-sol', shirt: 'camisa-2', shirtColor: '#F2E4C4', pants: 'short', pantsColor: '#8FB4E3', shoes: 'sandalias', shoesColor: '#F7F5F0', nose: 'dot', mouth: 'smile' },
+  { hair: 'largo', hairColor: '#66C7B4', skin: '#FFDCC6', accHead: 'flor', shirt: 'vestido', shirtColor: '#2B2B2E', pants: 'falda', pantsColor: '#F7F2E8', shoes: 'zapatos-2', shoesColor: '#F7F5F0', eyes: 'lashes', eyeColor: '#E8508A', nose: 'button', mouth: 'teeth' },
+  { hair: 'ondas', hairColor: '#814142', skin: '#FFC08A', accHead: 'audifonos', shirt: 'chaqueta-2', shirtColor: '#5F86A8', pants: 'jean', pantsColor: '#3B3B3F', shoes: 'zapatos', shoesColor: '#F7F5F0', eyes: 'soft', eyeColor: '#9C7657', nose: 'triangle', mouth: 'cat' },
+  { hair: 'colitas', hairColor: '#3F3B33', skin: '#FFD8B5', accHead: 'audifonos', shirt: 'chaqueta', shirtColor: '#2B2B2E', pants: 'short', pantsColor: '#8FB4E3', shoes: 'zapatos-2', shoesColor: '#F7F5F0', eyes: 'lashes', eyeColor: '#9C7657', nose: 'dot', mouth: 'cat' },
+  { hair: 'none', skin: '#FFD8B5', accHead: 'gafas-redondas', shirt: 'camisa', shirtColor: '#F6F1E6', pants: 'overol', pantsColor: '#6F96C8', shoes: 'zapatos', shoesColor: '#F7F5F0', eyes: 'classic', eyeColor: '#8FA17B', nose: 'triangle', mouth: 'cat' },
+  { hair: 'flequillo', hairColor: '#F89FAD', skin: '#FFD8B5', accHead: 'balaca', shirt: 'camisa', shirtColor: '#F6D032', pants: 'jean', pantsColor: '#3B3B3F', shoes: 'sandalias', shoesColor: '#E8C9A0', eyes: 'lashesTop', eyeColor: '#9C7657', nose: 'dot', mouth: 'smile' }
+]
+
 /* Productos físicos (precios ficticios en COP) */
 export const PRODUCTS = [
-  { id: 'figure', name: 'Figura', detail: 'Una figura de tu avatar con el charm que se seleccionó, incluye una cadena para uso como llavero y una base de acrílico para su uso como figura coleccionable.', price: 89900, days: '7 a 10 días hábiles' }
+  { id: 'figure', name: 'Figura', detail: 'Una figura de tu avatar con el charm que se seleccionó, incluye una cadena para uso como llavero y una base de acrílico para su uso como figura coleccionable. Mide 17 cm de alto con la base, que tiene 10 cm de diámetro; la cadena mide 7 cm y el charm unos 4 cm.', price: 89900, days: '7 a 10 días hábiles' }
 ]
 
 export const SHIPPING = { cost: 9900, freeFrom: 150000 }

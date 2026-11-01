@@ -4,8 +4,7 @@ import { esc, cop, $, $$ } from '../utils/format.js'
 import { store } from '../utils/store.js'
 import { sound } from '../utils/sound.js'
 import { go } from '../utils/router.js'
-import { renderAvatar } from '../three/Snapshot.js'
-import { productVisual } from './productVisual.js'
+import { renderAvatar, renderProduct } from '../three/Snapshot.js'
 import { toast } from './toast.js'
 
 /* CONFIRMACIÓN DEL PEDIDO (simulado) */
@@ -31,7 +30,7 @@ function template (o) {
 
     <div class="confirm-grid">
       <div class="confirm-visual">
-        ${productVisual(o.product.id)}
+        <div class="confirm-render"><img class="confirm-render-img" alt="Render de la figura con su cadena, charm y base de acrílico" /></div>
         <p class="confirm-caption">${esc(o.product.name)} de <strong>${esc(o.avatarName)}</strong></p>
       </div>
       <div class="confirm-details">
@@ -54,12 +53,36 @@ function template (o) {
   </section>`
 }
 
+/** Render del producto con la proporción actual del cuadro (lo llena sin franjas); se
+    vuelve a generar si la ventana cambia de tamaño y el cuadro cambia de forma. */
+let current = null
+async function refreshRender () {
+  if (!current) return
+  const { el, order } = current
+  const box = $('.confirm-render', el)
+  if (!box) return
+  const { width, height } = box.getBoundingClientRect()
+  if (!width || !height) return
+  const k = Math.min(2, 720 / Math.max(width, height))
+  const size = { width: Math.round(width * k), height: Math.round(height * k) }
+  const key = `${Math.round(size.width / 24)}x${Math.round(size.height / 24)}`
+  if (key === current.key) return
+  current.key = key
+  const url = await renderProduct(order.avatar, size)
+  if (!current || current.el !== el || key !== current.key || !url) return
+  $('.confirm-render-img', el).src = url
+}
+let resizeTimer = null
+const onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(refreshRender, 250) }
+
 export const confirmationView = {
   name: 'confirm',
   async mount (el) {
     const o = store.order
     if (!o) { el.innerHTML = empty(); return }
     el.innerHTML = template(o)
+    current = { el, order: o, key: '' }
+    window.addEventListener('resize', onResize)
     sound.play('success')
     const tl = gsap.timeline({ delay: 0.1 })
     tl.from($('.confirm-badge', el), { scale: 0, rotation: -40, duration: 0.7, ease: 'back.out(2)' })
@@ -67,6 +90,12 @@ export const confirmationView = {
       .from($$('.confirm-visual, .confirm-details', el), { y: 20, autoAlpha: 0, stagger: 0.12, duration: 0.55 }, '-=0.2')
     $('[data-finish]', el).addEventListener('click', () => { go('/'); toast('¡Gracias por crear con nosotros!', { iconName: 'leaf' }) })
     const url = await renderAvatar(o.avatar, { width: 360, height: 360, framing: 'portrait' })
-    if (url) $$('.pv-img, .confirm-mini', el).forEach(img => { img.src = url })
+    if (url) $$('.confirm-mini', el).forEach(img => { img.src = url })
+    await refreshRender()
+  },
+  unmount () {
+    current = null
+    clearTimeout(resizeTimer)
+    window.removeEventListener('resize', onResize)
   }
 }
