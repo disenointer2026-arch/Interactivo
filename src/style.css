@@ -214,6 +214,8 @@ body[data-route="customize"]::before {
 /* Solo el inicio lleva la fila de arbustos sobre el pie: el hueco de arriba es
    justo lo que mide (HEDGE_H en utils/icons.js) y no tapa nada de la página. */
 body[data-route="home"] .site-footer { margin-top: 150px; }
+/* El estudio de personalización ocupa toda la pantalla: sin pie de página */
+body[data-route="customize"] .site-footer { display: none; }
 .hf h2 { font-weight: 900; line-height: 1.08; }
 
 /* ==========================================================================
@@ -274,11 +276,17 @@ body[data-route="customize"] .toast-region { bottom: auto; top: calc(var(--heade
   /* Sin recorte: el título puede pasar por detrás del encabezado */
 }
 .hero3d-word {
-  position: absolute; left: 50%; top: 41%; transform: translate(-50%, -50%);
+  /* top: el centro del bloque va a 53,5 % de la portada (el texto ocupa del 15 % al 92 % del alto);
+     si fuera más alto, se empuja hacia abajo lo justo para que la tilde nunca quede bajo el encabezado */
+  /* Sin "transform" para centrar: la animación de entrada (GSAP) convierte los % de un transform
+     según el alto que tenga el texto en ese instante y, si aún no se ha dibujado, lo descoloca. */
+  position: absolute; left: 0; top: calc(max(53.5%, 1.08em + 30px) - .9em);
   margin: 0; width: 100%; text-align: center; text-transform: uppercase;
   /* Un pelín de separación entre letras: ocupa algo más de ancho sin desarmarse */
   font-family: var(--font-display); font-weight: 900; letter-spacing: .015em; line-height: .9;
-  font-size: clamp(3.2rem, 20vw, 25rem); color: var(--ac-line);
+  /* Limitado por el ancho (20 %) Y por el alto de la portada (46 %): las dos líneas llenan casi
+     todo el alto sin salirse por arriba ni por los lados */
+  font-size: clamp(3rem, min(20vw, calc(max(380px, 100svh - var(--header-h)) * .46)), 25rem); color: var(--ac-line);
   pointer-events: none; user-select: none;
   /* Flota muy suavemente, como sobre el agua. Usa las propiedades "translate" y "rotate"
      (no "transform") para no chocar con la animación de entrada. */
@@ -626,7 +634,8 @@ body[data-route="customize"] .to-top, body[data-route="final"] .to-top { display
 .studio {
   /* Una sola fila: la ventana 3D y el panel "¿Cómo te ves?" tienen la misma altura */
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 430px); grid-template-rows: minmax(0, 1fr);
-  height: calc(100svh - var(--header-h)); gap: 24px; padding: 0 16px 16px;
+  /* Un margen arriba para que la ventana 3D y el panel no se peguen al encabezado (ni a su sombra) */
+  height: calc(100svh - var(--header-h)); gap: 24px; padding: 18px 16px 16px;
 }
 /* Hoja de guardado: aparece unos segundos en la esquina inferior izquierda de la
    ventana 3D cada vez que cambia el avatar (ver flashSaveLeaf en customizer.js) */
@@ -1432,7 +1441,7 @@ body[data-route="order"] .modal--login .btn--secondary { border: 3px solid var(-
   :root { --header-h: 64px; }
 
   /* Inicio */
-  .hero3d-word { font-size: clamp(3rem, 19vw, 8.5rem); top: 38%; }
+  .hero3d-word { font-size: clamp(3rem, min(19vw, calc(max(440px, 100svh - var(--header-h)) * .28)), 8.5rem); top: calc(max(38%, 1.25em + 14px) - .9em); }
   /* El llavero es alto: en móvil ocupa toda la pantalla, como en escritorio */
   .hero3d-visual { min-height: 440px; }
   .build-hint { left: 10px; transform: none; }
@@ -1444,7 +1453,7 @@ body[data-route="order"] .modal--login .btn--secondary { border: 3px solid var(-
   .hf-inquiries { align-items: center; }
 
   /* Estudio en móvil/tablet: avatar arriba (dominante), panel abajo */
-  .studio { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; gap: 0; padding: 0; height: calc(100svh - var(--header-h)); }
+  .studio { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; gap: 0; padding: 10px 0 0; height: calc(100svh - var(--header-h)); }
   .studio-stage { border-radius: 0; }
   .studio-panel { grid-column: 1; grid-row: 2; border-radius: var(--r-lg) var(--r-lg) 0 0; max-height: 50svh; margin-top: -22px; position: relative; z-index: 2; box-shadow: 0 -10px 30px -16px rgba(120, 104, 40, .4); }
   .panel-title { font-size: 1.2rem; padding: 12px 20px 0; }
